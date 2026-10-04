@@ -1,0 +1,1711 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ростометр — прогноз роста</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#070b16;color:#f5f7ff}
+  body.appBoot{overflow:hidden}
+  #bootScreen{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;overflow:hidden;background:
+    radial-gradient(circle at 50% 40%,rgba(105,137,255,.16),transparent 24%),
+    radial-gradient(circle at 20% 78%,rgba(91,221,191,.08),transparent 26%),
+    radial-gradient(circle at 82% 22%,rgba(180,133,255,.08),transparent 23%),#040712;
+    transition:opacity .7s cubic-bezier(.2,.8,.2,1),visibility .7s ease}
+  #bootScreen::before{content:"";position:absolute;inset:0;background:
+    linear-gradient(rgba(125,154,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(125,154,255,.035) 1px,transparent 1px);
+    background-size:42px 42px;mask-image:radial-gradient(circle at 50% 46%,black 0%,rgba(0,0,0,.7) 38%,transparent 78%);pointer-events:none}
+  #bootScreen::after{content:"";position:absolute;width:55vw;height:55vw;max-width:700px;max-height:700px;border-radius:50%;background:rgba(75,113,255,.055);filter:blur(60px);animation:bootAmbient 5s ease-in-out infinite;pointer-events:none}
+  #bootScreen.hide{opacity:0;visibility:hidden;pointer-events:none}
+  .bootInner{width:min(500px,90vw);text-align:center;position:relative;z-index:2;padding:24px 20px}
+  .bootBrand{display:inline-flex;align-items:center;gap:9px;margin-bottom:25px;padding:7px 11px;border:1px solid rgba(126,151,221,.16);border-radius:999px;background:rgba(13,21,40,.48);box-shadow:inset 0 1px rgba(255,255,255,.035),0 12px 40px rgba(0,0,0,.12);color:#7180a0;font-size:9px;font-weight:800;letter-spacing:2.3px}
+  .bootBrandDot{width:6px;height:6px;border-radius:50%;background:#66dec1;box-shadow:0 0 12px #66dec1;animation:bootDot 1.6s ease-in-out infinite}
+  .bootVisual{width:190px;height:190px;margin:0 auto 22px;position:relative;display:grid;place-items:center;border-radius:50%}
+  .bootHalo{position:absolute;inset:18px;border-radius:50%;background:radial-gradient(circle,rgba(116,149,255,.13),rgba(116,149,255,.035) 45%,transparent 69%);filter:blur(2px)}
+  .bootOrbit{position:absolute;border-radius:50%;border:1px solid rgba(132,158,241,.22);box-shadow:0 0 25px rgba(95,128,255,.04)}
+  .bootOrbit.o1{inset:27px;animation:bootSpin 8s linear infinite}
+  .bootOrbit.o2{inset:47px;border-color:rgba(104,224,193,.25);animation:bootSpin 5.5s linear infinite reverse}
+  .bootOrbit.o3{inset:67px;border-color:rgba(183,143,255,.25);animation:bootSpin 3.8s linear infinite}
+  .bootOrbit::before{content:"";position:absolute;width:5px;height:5px;right:12%;top:9%;border-radius:50%;background:#aabfff;box-shadow:0 0 12px #8da9ff}
+  .bootOrbit.o2::before{right:auto;left:10%;top:auto;bottom:14%;background:#6be0c4;box-shadow:0 0 12px #60dabb}
+  .bootOrbit.o3::before{right:7%;top:auto;bottom:7%;background:#bd96ff;box-shadow:0 0 12px #ae83ff}
+  .bootAxis{position:absolute;width:1px;height:154px;background:linear-gradient(transparent,rgba(145,168,255,.34) 18%,rgba(145,168,255,.5) 50%,transparent 82%);opacity:.75}
+  .bootAxis.x{transform:rotate(90deg)}
+  .bootSweep{position:absolute;width:76px;height:2px;left:50%;top:50%;transform-origin:0 50%;border-radius:99px;background:linear-gradient(90deg,rgba(129,162,255,.02),rgba(130,164,255,.5) 60%,#dfe7ff);box-shadow:0 0 14px rgba(122,158,255,.45);animation:bootSweep 2.2s cubic-bezier(.4,0,.2,1) infinite}
+  .bootSweep::after{content:"";position:absolute;right:-3px;top:50%;width:7px;height:7px;border-radius:50%;transform:translateY(-50%);background:#f1f4ff;box-shadow:0 0 13px rgba(178,199,255,.95)}
+  .bootCore{width:24px;height:24px;border-radius:50%;position:relative;z-index:3;background:radial-gradient(circle at 35% 30%,#fff,#dce6ff 45%,#9eb7ff 100%);box-shadow:0 0 15px rgba(190,207,255,.95),0 0 45px rgba(105,145,255,.7),0 0 85px rgba(105,145,255,.25);animation:bootPulse 1.55s ease-in-out infinite}
+  .bootCore::before{content:"";position:absolute;inset:-11px;border:1px solid rgba(144,170,255,.16);border-radius:50%;animation:bootPulseRing 1.55s ease-in-out infinite}
+  .bootKicker{font-size:10px;letter-spacing:4px;color:#7180a0;margin-bottom:8px}
+  .bootTitle{font-size:clamp(34px,9vw,52px);font-weight:900;letter-spacing:-2.7px;line-height:1;margin:0}
+  .bootTitle span{background:linear-gradient(90deg,#86adff 0%,#bb91ff 48%,#62dfc0 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .bootText{margin:12px 0 20px;color:#7f8ca7;font-size:13px;min-height:20px;transition:opacity .25s ease}
+  .bootMeta{display:flex;align-items:center;justify-content:space-between;margin:0 auto 8px;width:min(420px,90%);color:#53617c;font-size:9px;letter-spacing:1.4px;text-transform:uppercase}
+  .bootMeta span:last-child{color:#7183a8}
+  .bootProgress{height:6px;border-radius:99px;background:rgba(17,27,49,.9);overflow:hidden;width:min(420px,90%);margin:0 auto;box-shadow:inset 0 1px rgba(255,255,255,.035),0 0 0 1px rgba(126,151,221,.06)}
+  .bootProgressBar{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#76a6ff 0%,#a88cff 48%,#61ddbf 100%);box-shadow:0 0 20px rgba(117,163,255,.55);position:relative;overflow:hidden}
+  .bootProgressBar::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:bootShimmer 1.5s linear infinite}
+  .bootPercent{margin-top:10px;font-size:10px;color:#657493;letter-spacing:1.5px}
+  @keyframes bootSpin{to{transform:rotate(360deg)}}
+  @keyframes bootPulse{0%,100%{transform:scale(.82);filter:brightness(.96)}50%{transform:scale(1.1);filter:brightness(1.12)}}
+  @keyframes bootPulseRing{0%,100%{transform:scale(.86);opacity:.25}50%{transform:scale(1.18);opacity:.75}}
+  @keyframes bootSweep{0%{transform:rotate(-35deg);opacity:.2}45%{opacity:1}100%{transform:rotate(325deg);opacity:.2}}
+  @keyframes bootAmbient{0%,100%{transform:scale(.9);opacity:.55}50%{transform:scale(1.08);opacity:1}}
+  @keyframes bootShimmer{to{transform:translateX(100%)}}
+  @keyframes bootDot{0%,100%{opacity:.45;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
+  @media(prefers-reduced-motion:reduce){.bootOrbit,.bootSweep,.bootCore,.bootCore::before,.bootProgressBar::after,.bootScreen::after,.bootBrandDot{animation:none!important}}
+
+  body{display:flex;justify-content:center;overflow-x:hidden}
+  #app{position:relative;width:min(1100px,100%);min-height:100vh;padding:28px 18px 50px}
+  canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+  .wrap{position:relative;z-index:1}
+  .hero{text-align:center;padding:30px 10px 22px}
+  .badge{display:inline-flex;gap:8px;align-items:center;padding:8px 13px;border:1px solid #263150;background:#10182b;border-radius:999px;color:#a9b8ff;font-size:13px}
+  h1{font-size:clamp(36px,7vw,70px);line-height:.98;margin:18px 0 12px;letter-spacing:-3px}
+  .grad{background:linear-gradient(90deg,#78a9ff,#b889ff,#55e6c1);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{max-width:690px;margin:0 auto;color:#9da8c2;font-size:16px;line-height:1.6}
+  .card{background:rgba(13,19,35,.82);border:1px solid rgba(130,150,210,.18);box-shadow:0 25px 80px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.03);backdrop-filter:blur(18px);border-radius:28px;padding:24px}
+  .inputGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+
+  /* Creative input layout — visual hierarchy only, calculation logic unchanged */
+  .inputGrid{position:relative;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;padding-top:4px}
+  .inputGrid::before{content:"ТВОИ ДАННЫЕ · СТАРТОВАЯ ТОЧКА";grid-column:1/-1;display:flex;align-items:center;gap:10px;height:18px;margin:0 4px 2px;color:#647493;font-size:9px;font-weight:800;letter-spacing:1.5px}
+  .inputGrid::after{content:"";position:absolute;left:4px;right:4px;top:28px;height:1px;background:linear-gradient(90deg,rgba(112,145,255,.24),rgba(112,145,255,0),rgba(85,227,191,.18))}
+  .metric{grid-column:span 6;min-height:158px;padding:18px 18px 15px;border-radius:22px;background:linear-gradient(145deg,rgba(14,22,41,.98),rgba(8,14,27,.96));border-color:rgba(91,113,161,.28);box-shadow:inset 0 1px rgba(255,255,255,.025),0 10px 30px rgba(0,0,0,.10);transition:transform .42s cubic-bezier(.2,.85,.25,1),border-color .42s ease,box-shadow .42s ease,background .5s ease}
+  .metric::before{width:150px;height:150px;right:-70px;top:-82px;background:radial-gradient(circle,rgba(116,146,255,.13),rgba(116,146,255,0) 70%);filter:none;transition:transform .7s cubic-bezier(.2,.85,.25,1),opacity .5s ease}
+  .metric::after{content:"";position:absolute;left:18px;right:18px;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(129,158,255,.20),transparent);opacity:.7}
+  .metric:hover{transform:translateY(-3px);border-color:rgba(115,143,207,.52);box-shadow:0 18px 40px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.035)}
+  .metric:hover::before{transform:scale(1.16) translate(-5px,5px);opacity:1}
+  .metric:focus-within{transform:translateY(-2px);border-color:#718dff;box-shadow:0 0 0 3px rgba(113,141,255,.09),0 20px 44px rgba(36,57,110,.22),inset 0 1px rgba(255,255,255,.04)}
+  .metric.featured{background:linear-gradient(145deg,rgba(21,34,63,.99),rgba(9,16,31,.98));border-color:rgba(104,132,206,.42)}
+  .metric:nth-child(2)::before{background:radial-gradient(circle,rgba(173,137,255,.13),rgba(173,137,255,0) 70%)}
+  .metric:nth-child(3){grid-column:span 8;min-height:186px;background:linear-gradient(145deg,rgba(22,36,68,.99),rgba(9,17,33,.98));border-color:rgba(113,144,229,.48);box-shadow:inset 0 1px rgba(255,255,255,.04),0 16px 42px rgba(54,77,145,.16)}
+  .metric:nth-child(3)::before{width:220px;height:220px;right:-92px;top:-126px;background:radial-gradient(circle,rgba(110,157,255,.19),rgba(95,220,193,.045) 38%,rgba(110,157,255,0) 72%)}
+  .metric:nth-child(4){grid-column:span 4;min-height:186px}
+  .metric:nth-child(5),.metric:nth-child(6){grid-column:span 4;min-height:150px}
+  .metric:nth-child(7){grid-column:span 8;min-height:150px}
+  .wideMetric{grid-column:span 6;min-height:150px}
+  .sexMetric{grid-column:span 6;min-height:150px}
+  .metricHead{position:relative;z-index:1;gap:9px;color:#7181a0;font-size:9px;letter-spacing:1.05px}
+  .metricHead em{color:#425273;font-size:9px}
+  .metricIcon{width:29px;height:29px;border-radius:10px;background:linear-gradient(145deg,#162443,#101a30);border:1px solid rgba(126,153,218,.13);color:#9cb5ff;font-size:13px;box-shadow:inset 0 1px rgba(255,255,255,.06),0 5px 14px rgba(0,0,0,.14)}
+  .metric label{position:relative;z-index:1;margin:18px 0 9px 1px;color:#e3e8f5;font-size:13px;font-weight:700;letter-spacing:.05px}
+  .metricInput{position:relative;z-index:1;align-items:flex-end;gap:10px;padding:10px 11px 9px 12px;border:1px solid rgba(101,125,176,.20);border-radius:15px;background:linear-gradient(135deg,rgba(8,14,28,.55),rgba(19,29,52,.38));box-shadow:inset 0 1px rgba(255,255,255,.025);transition:border-color .4s ease,background .4s ease,box-shadow .4s ease}
+  .metric:focus-within .metricInput{border-color:rgba(117,147,230,.48);background:linear-gradient(135deg,rgba(12,21,40,.72),rgba(22,34,60,.50));box-shadow:0 0 0 3px rgba(106,136,226,.055),inset 0 1px rgba(255,255,255,.035)}
+  .metricInput input{font-size:30px;letter-spacing:-1px}
+  .metricInput input::placeholder{color:#465675}
+  .metricInput span{padding:7px 9px;border-color:rgba(91,116,170,.30);border-radius:10px;background:rgba(13,22,40,.78);color:#8fa0bf;font-size:9px}
+  .metric:nth-child(3) .metricInput input{font-size:38px}
+  .liveLine{position:relative;z-index:1;margin-top:10px;font-size:9px;color:#7282a0}
+  .hint{position:relative;z-index:1;margin-top:7px;font-size:10px;color:#687895}
+  .wideMetric .metricInput{max-width:none}
+  .sexMetric .customSelect{background:linear-gradient(135deg,rgba(8,15,29,.54),rgba(18,29,51,.42));border:1px solid rgba(101,125,176,.20);padding:10px 12px;min-height:50px}
+  .accuracyPanel{margin-top:18px;padding:16px;border-radius:20px;background:linear-gradient(135deg,rgba(20,31,55,.62),rgba(10,17,31,.42));border-color:rgba(126,151,206,.18);box-shadow:inset 0 1px rgba(255,255,255,.025)}
+  .accuracyTitle{font-size:13px;letter-spacing:.1px}
+  @media(max-width:700px){
+    .inputGrid{grid-template-columns:1fr;gap:12px;padding-top:3px}
+    .inputGrid::before{margin-left:3px;margin-right:3px}
+    .inputGrid::after{top:27px}
+    .metric,.metric:nth-child(3),.metric:nth-child(4),.metric:nth-child(5),.metric:nth-child(6),.metric:nth-child(7),.wideMetric,.sexMetric{grid-column:1/-1;min-height:151px}
+    .metric:nth-child(3){min-height:182px}
+    .metric:nth-child(4){min-height:151px}
+    .metric:nth-child(5),.metric:nth-child(6){min-height:142px}
+    .metric:nth-child(7){min-height:151px}
+    .wideMetric,.sexMetric{min-height:151px}
+    .metricInput input{font-size:29px}
+    .metric:nth-child(3) .metricInput input{font-size:36px}
+  }
+  .metric{position:relative;min-height:145px;padding:16px 17px 14px;border:1px solid #202b47;border-radius:20px;background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(9,14,27,.96));overflow:hidden;transition:transform .18s,border-color .18s,box-shadow .18s}
+  .metric:before{content:"";position:absolute;width:90px;height:90px;right:-38px;top:-44px;border-radius:50%;background:rgba(120,155,255,.08);filter:blur(2px)}
+  .metric:hover{transform:translateY(-2px);border-color:#34446d;box-shadow:0 14px 35px rgba(0,0,0,.2)}
+  .metric:focus-within{border-color:#718dff;box-shadow:0 0 0 3px rgba(113,141,255,.09),0 16px 40px rgba(36,57,110,.2)}
+  .metric.featured{background:linear-gradient(145deg,rgba(18,28,52,.98),rgba(10,16,31,.98));border-color:#2d3e68}
+  .metricHead{display:flex;align-items:center;gap:8px;color:#6f7f9e;font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap}
+  .metricHead em{margin-left:auto;color:#3e4d6b;font-style:normal;font-size:10px}
+  .metricIcon{width:25px;height:25px;display:grid;place-items:center;border-radius:8px;background:#151f37;color:#8eabff;font-size:14px;box-shadow:inset 0 1px rgba(255,255,255,.05)}
+  .metric label{display:block;margin:16px 0 7px 1px;color:#d6ddef;font-size:13px;font-weight:600}
+  .metricInput{display:flex;align-items:center;gap:9px}
+  .metricInput input{min-width:0;width:100%;border:0;outline:0;background:transparent;color:#fff;font-size:27px;line-height:1;font-weight:750;letter-spacing:-.7px;padding:0}
+  .metricInput input::placeholder{color:#394762}
+  .metricInput span{flex:none;padding:6px 8px;border:1px solid #293654;border-radius:8px;background:#10182b;color:#8090af;font-size:10px;font-weight:700;letter-spacing:.5px}
+  .liveLine{margin-top:10px;font-size:9px;color:#667695;display:flex;align-items:center;gap:6px}
+  .liveLine i{width:5px;height:5px;border-radius:50%;background:#60dabb;box-shadow:0 0 9px #60dabb}
+  .wideMetric{grid-column:1/-1;min-height:132px}
+  .wideMetric .metricInput{max-width:380px}
+  .sexMetric{min-height:132px;overflow:visible;z-index:5}
+  .selectWrap{display:flex;align-items:center;position:relative}
+  .selectNative{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;clip:rect(0 0 0 0)!important}
+  .customSelect{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:44px;box-sizing:border-box;padding:8px 2px 7px;color:#fff;font-size:21px;font-weight:700;line-height:1;cursor:pointer;user-select:none;outline:none;border-radius:12px;transition:color .35s ease,transform .5s cubic-bezier(.2,.85,.25,1),filter .45s ease}
+  .customSelect:hover{filter:brightness(1.08)}
+  .customSelect:focus-visible{box-shadow:0 0 0 3px rgba(125,154,255,.16)}
+  .customSelect.open{transform:translateY(-1px);color:#fff}
+  .customSelectValue{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .customChevron{flex:none;width:28px;height:28px;display:grid;place-items:center;border-radius:9px;color:#8494b4;font-size:17px;font-weight:500;transform:rotate(0deg);transition:transform .5s cubic-bezier(.2,.85,.25,1),background .4s ease,color .4s ease}
+  .customSelect.open .customChevron{transform:rotate(180deg);background:rgba(112,145,255,.10);color:#a9bdff}
+  .customMenu{position:fixed;z-index:1000;min-width:180px;box-sizing:border-box;padding:6px;border:1px solid rgba(126,151,206,.22);border-radius:17px;background:linear-gradient(145deg,rgba(18,27,48,.98),rgba(9,15,29,.98));box-shadow:0 22px 60px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.025) inset,0 0 30px rgba(104,135,255,.07);backdrop-filter:blur(22px);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-8px) scale(.975);transform-origin:top center;transition:opacity .28s ease,transform .42s cubic-bezier(.2,.85,.25,1),visibility 0s linear .42s}
+  .customMenu.open{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0) scale(1);transition:opacity .24s ease,transform .48s cubic-bezier(.2,.9,.2,1),visibility 0s}
+  .customOption{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:46px;padding:0 12px;border-radius:12px;color:#bfc9dc;font-size:14px;font-weight:650;cursor:pointer;transition:background .32s ease,color .32s ease,transform .32s cubic-bezier(.2,.85,.25,1)}
+  .customOption::after{content:"";width:7px;height:7px;flex:none;border-radius:50%;background:transparent;box-shadow:0 0 0 0 rgba(132,161,255,0);transition:background .35s ease,box-shadow .45s ease,transform .4s cubic-bezier(.2,.85,.25,1)}
+  .customOption:hover{background:linear-gradient(90deg,rgba(105,139,255,.12),rgba(173,139,255,.08));color:#f5f7ff;transform:translateX(2px)}
+  .customOption.selected{background:linear-gradient(90deg,rgba(105,139,255,.18),rgba(173,139,255,.11));color:#fff}
+  .customOption.selected::after{background:#9bb7ff;box-shadow:0 0 12px rgba(133,165,255,.75);transform:scale(1.05)}
+  .customOption:active{transform:scale(.985)}
+  .customMenu.above{transform-origin:bottom center}
+  .customMenu.above:not(.open){transform:translateY(8px) scale(.975)}
+  .accuracyField .customSelect{min-height:40px;padding:0 10px;border:1px solid #293654;border-radius:12px;background:linear-gradient(145deg,rgba(13,21,39,.96),rgba(10,17,31,.96));font-size:12px;font-weight:650;color:#eef3ff;box-shadow:inset 0 1px rgba(255,255,255,.025);transition:border-color .4s ease,box-shadow .45s ease,background .45s ease,transform .5s cubic-bezier(.2,.85,.25,1)}
+  .accuracyField .customSelect:hover{border-color:#3b4c74}
+  .accuracyField .customSelect.open{border-color:#627fe0;box-shadow:0 0 0 3px rgba(103,132,235,.10),0 10px 30px rgba(35,54,104,.15);background:linear-gradient(145deg,rgba(16,27,50,.98),rgba(9,16,31,.98))}
+  .accuracyField .customChevron{width:24px;height:24px;font-size:15px}
+  /* Accuracy+ panel */
+  .accuracyPanel{margin-top:16px;padding:14px;border:1px solid rgba(126,151,206,.14);border-radius:16px;background:linear-gradient(135deg,rgba(20,31,55,.52),rgba(10,17,31,.34));}
+  .accuracyHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .accuracyTitle{font-size:13px;font-weight:800;color:#e4eafa}
+  .accuracySub{font-size:10px;color:#71809e;line-height:1.45}
+  .accuracyGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .accuracyField label{display:block;margin:0 0 6px 1px;color:#aebbd3;font-size:10px;font-weight:700}
+  .accuracyField select,.accuracyField input{width:100%;box-sizing:border-box;border:1px solid #293654;border-radius:10px;background:#0d1527;color:#eef3ff;padding:10px 11px;font-size:12px;font-weight:650;outline:none}
+  .accuracyField .smallHint{margin-top:5px;font-size:9px;color:#65738f;line-height:1.35}
+  @media(max-width:680px){.accuracyGrid{grid-template-columns:1fr}.accuracyPanel{padding:13px}}
+
+.formFooter{margin-top:13px}
+  .smartNote{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid #1b2741;border-radius:15px;background:#0b1221;color:#8492ae}
+  .smartNote>span{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#121d35;color:#89a7ff}
+  .smartNote b{display:block;color:#b9c4da;font-size:11px;margin-bottom:2px}
+  .smartNote small{display:block;color:#687793;font-size:10px;line-height:1.4}
+  .hint{font-size:12px;color:#64718e;margin-top:6px}
+  button{position:relative;isolation:isolate;overflow:hidden;width:100%;margin-top:18px;border:1px solid rgba(255,255,255,.09);border-radius:17px;padding:16px;font-size:17px;font-weight:800;color:#07101c;background:linear-gradient(110deg,#73a7ff 0%,#ae91ff 48%,#55e3bf 100%);background-size:160% 100%;cursor:pointer;box-shadow:0 10px 35px rgba(107,137,255,.22),inset 0 1px rgba(255,255,255,.35);transform:translateY(0) scale(1);transition:transform .42s cubic-bezier(.2,.85,.25,1),filter .5s ease,box-shadow .5s ease,background-position .8s ease;will-change:transform}
+  button::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(115deg,transparent 15%,rgba(255,255,255,.24) 48%,transparent 75%);transform:translateX(-125%);transition:transform .85s cubic-bezier(.2,.7,.2,1)}
+  button:hover{transform:translateY(-2px) scale(1.006);filter:brightness(1.055);background-position:100% 50%;box-shadow:0 15px 42px rgba(107,137,255,.28),inset 0 1px rgba(255,255,255,.4)}
+  button:hover::before{transform:translateX(125%)}
+  button:active{transform:translateY(1px) scale(.985);filter:brightness(.98);box-shadow:0 4px 14px rgba(107,137,255,.2),inset 0 2px 7px rgba(4,10,24,.13);transition-duration:.12s}
+  button:focus-visible{outline:2px solid rgba(154,180,255,.9);outline-offset:4px}
+  button .buttonRipple{position:absolute;z-index:0;pointer-events:none;border-radius:50%;background:rgba(255,255,255,.45);transform:scale(0);animation:buttonRipple .72s cubic-bezier(.15,.65,.25,1) forwards;mix-blend-mode:soft-light}
+  button>*{position:relative}
+  button.back{border-color:rgba(145,164,220,.08);background:linear-gradient(115deg,#111a2d,#17213a 52%,#111a2d);background-size:180% 100%;color:#dfe6f8;box-shadow:inset 0 1px rgba(255,255,255,.035),0 8px 24px rgba(0,0,0,.12)}
+  button.back:hover{box-shadow:0 12px 30px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.06)}
+  @keyframes buttonRipple{to{transform:scale(1);opacity:0}}
+  @media(prefers-reduced-motion:reduce){
+    button,button::before{transition:none!important}
+    button .buttonRipple{animation-duration:.01ms}
+  }
+
+  /* Animated result: accelerating height counter */
+  .result.show .resultTop{animation:resultReveal .72s cubic-bezier(.2,.85,.25,1) both}
+  .result.show .meter{animation:resultReveal .78s .08s cubic-bezier(.2,.85,.25,1) both}
+  .result.show .details,.result.show .probabilityCard,.result.show .disclaimer,
+  .result.show .sources,.result.show .back{animation:resultReveal .72s .16s cubic-bezier(.2,.85,.25,1) both}
+  .number{position:relative;transform:translateZ(0);text-shadow:0 0 28px rgba(130,173,255,.12)}
+  .number.counting{animation:numberPulse .9s ease-in-out infinite alternate}
+  .number.counted{animation:numberFinish .75s cubic-bezier(.2,.85,.25,1) both}
+  .countCaption{min-height:18px;margin-top:2px;color:#7080a0;font-size:10px;letter-spacing:.8px;text-transform:uppercase}
+  .futureGain{display:inline-flex;align-items:center;gap:7px;margin-top:9px;padding:7px 11px;border:1px solid rgba(105,222,193,.16);border-radius:999px;background:rgba(78,190,164,.06);color:#87d9c2;font-size:11px;font-weight:750;opacity:0;transform:translateY(7px) scale(.98)}
+  .futureGain.show{animation:gainReveal .65s .1s cubic-bezier(.2,.85,.25,1) forwards}
+  .futureGain .gainDot{width:5px;height:5px;border-radius:50%;background:#60dabb;box-shadow:0 0 10px #60dabb}
+  @keyframes resultReveal{from{opacity:0;transform:translateY(13px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @keyframes numberPulse{from{filter:brightness(1);text-shadow:0 0 22px rgba(130,173,255,.08)}to{filter:brightness(1.12);text-shadow:0 0 38px rgba(150,174,255,.28)}}
+  @keyframes numberFinish{0%{transform:scale(1.035);filter:brightness(1.18)}55%{transform:scale(.985);filter:brightness(1.04)}100%{transform:scale(1);filter:brightness(1)}}
+  @keyframes gainReveal{from{opacity:0;transform:translateY(7px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @media(prefers-reduced-motion:reduce){
+    .result.show .resultTop,.result.show .meter,.result.show .details,.result.show .probabilityCard,
+    .result.show .disclaimer,.result.show .sources,.result.show .back,.number.counting,.number.counted,.futureGain.show{
+      animation:none!important;opacity:1!important;transform:none!important
+    }
+  }
+
+  .notice{margin-top:15px;color:#7886a3;font-size:12px;line-height:1.55;text-align:center}
+  .loader{display:none;text-align:center;padding:42px 20px 36px;min-height:410px;justify-content:center;flex-direction:column;align-items:center}.loader.show{display:flex}
+  
+  .scan{width:108px;height:108px;position:relative;margin:0 auto 20px;border-radius:50%;background:radial-gradient(circle,rgba(125,160,255,.18),rgba(8,13,27,.2) 58%,transparent 60%);display:grid;place-items:center;overflow:hidden}
+  .scanRing{position:absolute;border:1px solid rgba(135,161,255,.28);border-radius:50%}
+  .r1{inset:8px;animation:softSpin 4s linear infinite}
+  .r2{inset:22px;border-color:rgba(91,222,191,.25);animation:softSpin 3s linear infinite reverse}
+  .scanDot{width:10px;height:10px;border-radius:50%;background:#e7ecff;box-shadow:0 0 18px rgba(150,175,255,.9);z-index:2}
+  .scanLine{position:absolute;width:40px;height:2px;left:50%;top:50%;transform-origin:0 50%;border-radius:999px;background:linear-gradient(90deg,rgba(138,167,255,.12),#8aa7ff 72%,#dbe4ff);box-shadow:0 0 9px rgba(138,167,255,.45);animation:scan 1.7s linear infinite;z-index:3}.scanLine::after{content:"";position:absolute;right:-2px;top:50%;width:5px;height:5px;border-radius:50%;background:#e9efff;box-shadow:0 0 8px rgba(180,198,255,.95);transform:translateY(-50%)}
+  .analysisLabel{font-size:10px;letter-spacing:3px;color:#667594;margin-bottom:7px}
+  .loader h2{margin:0 0 7px;font-size:22px}
+  #loaderText{color:#8e9bb8;min-height:22px}
+  .steps{display:flex;align-items:center;gap:9px;margin-top:23px;color:#52617d;font-size:11px}
+  .steps span{transition:.25s}.steps .active{color:#dfe7ff}.steps i{width:22px;height:1px;background:#26314b}
+  .progress{height:4px;background:#111a30;border-radius:99px;overflow:hidden;width:min(430px,90%);margin:24px auto 0}
+  .bar{height:100%;width:0;background:linear-gradient(90deg,#7ca8ff,#b18dff,#61dcbf);border-radius:99px}
+  @keyframes scan{0%{transform:rotate(0deg);opacity:.72}50%{transform:rotate(180deg);opacity:1}100%{transform:rotate(360deg);opacity:.72}}
+  @keyframes softSpin{to{transform:rotate(360deg)}}
+  .result{display:none;padding:5px}
+  .result.show{display:block}
+  .resultTop{text-align:center;padding:25px 10px 8px}
+  .resultTop .small{color:#8d9ab4;font-size:13px}
+  .number{font-size:clamp(64px,12vw,110px);font-weight:900;letter-spacing:-6px;line-height:1;margin:14px 0 8px;background:linear-gradient(90deg,#83adff,#bd91ff,#66e3c2);-webkit-background-clip:text;color:transparent}
+  .range{font-size:18px;color:#dce3f5}
+  .meter{max-width:650px;margin:30px auto 20px;height:14px;border-radius:99px;background:#111a2c;position:relative;overflow:hidden}
+  .meterFill{position:absolute;inset:0;background:linear-gradient(90deg,#5e7eff,#b58eff,#54ddb9);opacity:.8}
+  .marker{position:absolute;top:-8px;width:4px;height:30px;background:#fff;border-radius:5px;box-shadow:0 0 15px #fff}
+  .details{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+  .stat{padding:17px;border-radius:17px;background:#0a1020;border:1px solid #1d2945}
+  .stat b{display:block;font-size:20px;margin-bottom:4px}
+  .stat span{font-size:12px;color:#7f8ca7}
+
+  .probabilityCard{margin:24px 0 4px;padding:18px 18px 16px;border-radius:20px;background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(8,13,25,.98));border:1px solid rgba(126,151,218,.18);box-shadow:inset 0 1px rgba(255,255,255,.025),0 16px 40px rgba(0,0,0,.16)}
+  .probabilityHead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:13px}
+  .probabilityTitle{font-size:13px;font-weight:750;color:#cfd8ec}
+  .probabilitySub{font-size:10px;color:#667695;text-align:right}
+  .probabilityList{display:flex;flex-direction:column;gap:7px}
+  .probRow{display:grid;grid-template-columns:54px 1fr 42px;align-items:center;gap:9px;min-height:27px}
+  .probHeight{font-size:12px;font-weight:700;color:#aebbd3;text-align:right}
+  .probTrack{height:7px;border-radius:99px;background:#121b2f;overflow:hidden}
+  .probFill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#769fff,#ad8fff,#5cdbba);transition:width .55s ease}
+  .probPct{font-size:11px;font-weight:750;color:#8f9db8;text-align:right}
+  .probNote{margin-top:11px;font-size:9px;line-height:1.45;color:#596781}
+
+  /* Growth trajectory chart */
+  .growthChartCard{
+    margin-top:20px;padding:16px 14px 13px;border-radius:24px;
+    background:
+      radial-gradient(circle at 88% 8%,rgba(122,154,255,.12),transparent 26%),
+      linear-gradient(145deg,rgba(16,25,46,.98),rgba(8,13,26,.98));
+    border:1px solid rgba(126,151,218,.2);
+    box-shadow:inset 0 1px rgba(255,255,255,.035),0 20px 55px rgba(0,0,0,.18);
+    overflow:hidden;
+  }
+  .growthChartHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:11px}
+  .growthChartEyebrow{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#7181a0;margin-bottom:5px}
+  .growthChartTitle{font-size:18px;font-weight:800;letter-spacing:-.4px;color:#e8edfa}
+  .growthChartSub{margin-top:5px;font-size:10px;line-height:1.45;color:#667695;max-width:520px}
+  .growthChartBadge{flex:none;padding:7px 9px;border:1px solid rgba(111,143,255,.2);border-radius:10px;background:rgba(104,135,255,.07);color:#9fb4ff;font-size:9px;font-weight:750;white-space:nowrap}
+  .growthChartWrap{position:relative;height:245px;touch-action:none;-webkit-user-select:none;user-select:none;border:1px solid rgba(125,148,205,.1);border-radius:18px;background:linear-gradient(180deg,rgba(9,15,29,.78),rgba(6,11,22,.9));overflow:hidden}
+  #growthChart{
+    position:absolute;
+    inset:0;
+    display:block;
+    width:100%;
+    height:100%;
+    z-index:1;
+    pointer-events:none;
+  }
+  .growthChartHint{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);z-index:2;padding:5px 9px;border:1px solid rgba(130,154,218,.13);border-radius:999px;background:rgba(8,14,28,.76);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#71809d;font-size:8px;letter-spacing:.1px;pointer-events:none;opacity:.88;transition:opacity .35s ease,transform .35s ease;}
+  .growthChartWrap.is-dragging .growthChartHint{opacity:0;transform:translate(-50%,4px);}
+  .growthChartLegend{display:flex;flex-wrap:wrap;gap:7px 14px;margin:9px 2px 0;color:#71809d;font-size:9px}
+  .legendItem{display:inline-flex;align-items:center;gap:7px}
+  .legendLine{width:20px;height:2px;border-radius:99px;background:#8eaaff}
+  .legendLine.dashed{background:linear-gradient(90deg,#5e7298 50%,transparent 50%);background-size:6px 2px}
+  .legendDot{width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(119,227,198,.16),0 0 14px rgba(119,227,198,.75)}
+  .growthChartFoot{display:flex;justify-content:space-between;gap:10px;margin-top:7px;color:#56647e;font-size:9px;line-height:1.45}
+  .growthChartFoot b{color:#8b9bb9}
+  @media(max-width:700px){
+    .growthChartCard{padding:16px 12px 13px}
+    .growthChartHead{gap:9px}
+    .growthChartTitle{font-size:16px}
+    .growthChartBadge{font-size:8px;padding:6px 7px}
+    .growthChartWrap{height:220px}
+    .growthChartFoot{flex-direction:column;gap:4px}
+  }
+
+
+  /* CURRENT → FUTURE HEIGHT COMPARISON */
+  .heightCompareCard{position:relative;margin-top:18px;padding:17px 14px 14px;border-radius:24px;background:
+    radial-gradient(circle at 50% -10%,rgba(93,125,255,.11),transparent 44%),
+    linear-gradient(180deg,rgba(15,24,46,.94),rgba(8,15,29,.98));
+    border:1px solid rgba(126,151,218,.18);box-shadow:0 18px 50px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.025);overflow:hidden}
+  .heightCompareHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .heightCompareEyebrow{font-size:9px;letter-spacing:.17em;text-transform:uppercase;color:#7181a0;font-weight:800}
+  .heightCompareTitle{margin-top:4px;font-size:18px;font-weight:850;letter-spacing:-.03em;color:#f1f5ff}
+  .heightCompareSub{margin-top:4px;font-size:10px;line-height:1.4;color:#687694;max-width:410px}
+  .heightCompareDelta{flex:none;padding:7px 9px;border-radius:11px;border:1px solid rgba(96,221,190,.2);background:rgba(77,214,180,.065);color:#80e4c7;font-size:10px;font-weight:800;white-space:nowrap}
+  .heightCompareStage{position:relative;height:382px;border-radius:19px;border:1px solid rgba(125,148,205,.1);background:
+    radial-gradient(circle at 50% 72%,rgba(83,121,230,.08),transparent 36%),
+    linear-gradient(180deg,rgba(4,10,22,.62),rgba(5,11,23,.9));overflow:hidden}
+  .heightCompareGrid{position:absolute;inset:0 13px 34px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
+  .heightCompareGrid span{display:block;height:1px;background:linear-gradient(90deg,transparent,rgba(133,154,205,.11) 10%,rgba(133,154,205,.11) 90%,transparent)}
+  .heightCompareScale{position:absolute;right:8px;top:8px;bottom:35px;width:27px;color:#52617e;font-size:8px;pointer-events:none}
+  .heightCompareScale i{position:absolute;right:0;transform:translateY(-50%);font-style:normal}
+  .heightCompareFloor{position:absolute;left:12px;right:12px;bottom:33px;height:1px;background:linear-gradient(90deg,transparent,rgba(132,151,198,.42) 8%,rgba(132,151,198,.42) 92%,transparent);box-shadow:0 0 18px rgba(91,129,255,.12)}
+  .heightComparePeople{position:absolute;left:7%;right:12%;bottom:34px;top:64px;display:flex;align-items:flex-end;justify-content:center;gap:0;z-index:2}
+  .heightPerson{position:relative;height:100%;width:46%;display:flex;align-items:flex-end;justify-content:center;min-width:118px}
+  .heightPersonSilhouette{position:absolute;bottom:0;width:auto;height:var(--person-height);max-height:100%;display:block;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 0 12px rgba(105,151,255,.12));transform-origin:bottom center;transition:height .9s cubic-bezier(.2,.8,.2,1),filter .5s ease}
+  .heightPerson.current .heightPersonSilhouette{opacity:.94}
+  .heightPerson.future .heightPersonSilhouette{opacity:.98;filter:drop-shadow(0 0 17px rgba(101,222,193,.26))}
+  .heightPersonLabel{position:absolute;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;z-index:5;bottom:calc(var(--person-height) + 8px);transition:bottom .9s cubic-bezier(.2,.8,.2,1)}
+  .heightPersonLabel .eyebrow{display:block;font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:#697795;font-weight:800}
+  .heightPersonLabel strong{display:block;margin-top:3px;font-size:14px;color:#eef3ff;letter-spacing:-.02em}
+  .heightPerson.future .heightPersonLabel strong{color:#8ce5cc}
+  .heightPersonLabel small{display:block;margin-top:2px;font-size:9px;color:#7c8aa7}
+  .heightPersonLabel .miniPill{display:inline-flex;margin-top:5px;padding:3px 6px;border-radius:999px;border:1px solid rgba(126,151,218,.16);background:rgba(8,14,28,.84);color:#9eacc8;font-size:8px;font-weight:750}
+  .heightHeadGuide{position:absolute;left:9%;right:9%;height:1px;border-top:1px dashed rgba(115,139,201,.16);z-index:1;pointer-events:none;transition:top .9s cubic-bezier(.2,.8,.2,1)}
+  .heightHeadGuide.future{border-color:rgba(115,226,200,.34)}
+  .heightCompareMeasure{position:absolute;z-index:4;width:34px;pointer-events:none;opacity:0;transition:opacity .45s ease}
+  .heightCompareMeasure .measureLine{position:absolute;left:50%;top:0;bottom:0;width:1px;background:linear-gradient(180deg,rgba(114,222,195,.08),rgba(114,222,195,.75),rgba(114,222,195,.08))}
+  .heightCompareMeasure .measureLine:before,.heightCompareMeasure .measureLine:after{content:'';position:absolute;left:50%;width:8px;height:1px;background:#79dec4;transform:translateX(-50%)}
+  .heightCompareMeasure .measureLine:before{top:0}.heightCompareMeasure .measureLine:after{bottom:0}
+  .heightCompareMeasure span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:4px 6px;border-radius:999px;border:1px solid rgba(113,223,195,.24);background:#0b1729;color:#84e0ca;font-size:8px;font-weight:850;white-space:nowrap;box-shadow:0 0 18px rgba(87,213,183,.12)}
+  .heightCompareConnector{position:absolute;left:50%;bottom:42%;width:13%;height:1px;background:linear-gradient(90deg,rgba(117,151,255,.03),rgba(121,221,199,.55),rgba(117,151,255,.03));transform:translateX(-50%);z-index:1}
+  .heightCompareConnector:after{content:'+';position:absolute;left:50%;top:50%;transform:translate(-50%,-55%);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#0c1729;border:1px solid rgba(113,223,195,.25);color:#79dec4;font-size:12px;font-weight:800;box-shadow:0 0 18px rgba(87,213,183,.13)}
+  .heightCompareFoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;color:#5d6b86;font-size:9px;line-height:1.4}
+  .heightCompareFoot b{color:#8d9cba}.heightCompareFoot .sourceMark{color:#667694}
+  @media(max-width:520px){
+    .heightCompareCard{padding:15px 11px 13px;border-radius:21px}
+    .heightCompareTitle{font-size:17px}.heightCompareSub{font-size:9px}.heightCompareDelta{font-size:9px;padding:6px 7px}
+    .heightCompareStage{height:350px}.heightComparePeople{left:4%;right:9%;top:70px;gap:0}.heightPerson{width:48%;min-width:88px}
+    .heightPersonLabel strong{font-size:13px}.heightCompareConnector{width:11%}.heightCompareMeasure{width:30px}
+    .heightCompareScale{font-size:7px}
+  }
+
+  .disclaimer{margin:22px 0 4px;padding:15px 16px;border-radius:15px;background:#0d1425;border:1px solid #202d4a;color:#7f8ba4;font-size:12px;line-height:1.6}
+  .sources{font-size:12px;color:#77839b;line-height:1.6;margin-top:15px}
+  .sources a{color:#9eb4ff}
+  .back{background:#111a2d;color:#dfe6f8;box-shadow:none}
+  @media(max-width:700px){
+  .probabilityCard{padding:16px 14px}
+  .probabilityHead{align-items:flex-start}
+  .probabilitySub{font-size:9px}
+
+  .inputGrid,.details{grid-template-columns:1fr}
+  .wideMetric{grid-column:auto}
+  .metric{min-height:137px}
+  .wideMetric .metricInput{max-width:none}
+  .card{padding:14px;border-radius:24px}
+  .number{letter-spacing:-4px}
+}
+
+/* HEIGHT TIER / GROWTH RANK */
+.heightTierCard{position:relative;margin-top:18px;padding:18px 16px 16px;border:1px solid rgba(142,156,255,.16);border-radius:24px;background:linear-gradient(180deg,rgba(15,20,42,.96),rgba(8,12,27,.98));box-shadow:0 18px 45px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.035);overflow:hidden}
+.heightTierCard:before{content:"";position:absolute;inset:-30% -10% auto;height:150px;background:radial-gradient(circle,rgba(103,116,255,.16),transparent 68%);pointer-events:none}
+.heightTierHead{position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:13px}
+.heightTierEyebrow{font-size:10px;letter-spacing:.19em;text-transform:uppercase;color:#7884a9;font-weight:800}
+.heightTierTitle{margin-top:5px;font-size:19px;font-weight:850;letter-spacing:-.025em;color:#f5f7ff}
+.heightTierSub{font-size:11px;line-height:1.4;color:#77819f;text-align:right;max-width:145px}
+.tierRail{position:relative;border-radius:18px;padding:6px 7px;background:rgba(3,6,17,.72);border:1px solid rgba(255,255,255,.045);overflow:hidden}
+.tierRow{position:relative;display:flex;align-items:center;min-height:43px;padding:0 13px 0 39px;border-radius:13px;color:#6f7895;font-size:13px;font-weight:750;letter-spacing:-.01em;transition:background .35s ease,color .35s ease,transform .35s ease,box-shadow .35s ease}
+.tierRow + .tierRow{margin-top:2px}
+.tierRow .tierDot{position:absolute;left:15px;width:7px;height:7px;border-radius:50%;background:rgba(132,144,180,.34);box-shadow:0 0 0 4px rgba(132,144,180,.045);transition:all .35s ease}
+.tierRow .tierRange{margin-left:auto;font-size:9px;font-weight:650;letter-spacing:.02em;color:#505a78;transition:color .35s ease}
+.tierRow.active{color:#f7f9ff;background:linear-gradient(90deg,rgba(91,108,255,.18),rgba(103,217,255,.08));box-shadow:inset 0 0 0 1px rgba(122,144,255,.22),0 7px 22px rgba(73,94,255,.12);transform:translateX(4px)}
+.tierRow.active .tierDot{background:#a9e9ff;box-shadow:0 0 0 4px rgba(105,205,255,.12),0 0 16px rgba(105,205,255,.8)}
+.tierRow.active .tierRange{color:#9aa9db}
+.tierArrow{position:absolute;left:8px;top:0;width:23px;height:43px;display:flex;align-items:center;justify-content:center;z-index:5;opacity:0;transform:translateX(-10px);transition:opacity .25s ease,transform .25s ease}
+.tierArrow:before{content:"";width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:8px solid #a8eaff;filter:drop-shadow(0 0 7px rgba(104,215,255,.8))}
+.tierArrow:after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:rgba(116,210,255,.08);box-shadow:0 0 16px rgba(116,210,255,.15);left:2px;top:12px;z-index:-1}
+.tierArrow.show{opacity:1;transform:translateX(0)}
+.tierResult{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:12px;min-height:24px;font-size:11px;color:#687390}
+.tierResult strong{font-size:13px;color:#dce6ff}.tierBoundaryNote{display:block;margin-top:3px;font-size:9px;color:#7786a8;font-weight:600;line-height:1.35}
+.tierResult .spark{display:inline-block;width:5px;height:5px;border-radius:50%;background:#a9e9ff;box-shadow:0 0 10px rgba(105,220,255,.8);animation:tierSpark 1.2s ease-in-out infinite}
+@keyframes tierSpark{0%,100%{opacity:.45;transform:scale(.8)}50%{opacity:1;transform:scale(1.25)}}
+.tierRow.selected{animation:tierSelected .8s cubic-bezier(.2,.8,.2,1)}
+@keyframes tierSelected{0%{transform:translateX(7px) scale(.985)}45%{transform:translateX(4px) scale(1.015)}100%{transform:translateX(4px) scale(1)}}
+@media(max-width:520px){.heightTierCard{border-radius:21px;padding:16px 12px 14px}.heightTierTitle{font-size:18px}.heightTierSub{font-size:10px;max-width:125px}.tierRow{min-height:40px;font-size:12px;padding-left:35px}.tierArrow{height:40px}.tierRow .tierRange{font-size:8px}.tierRow .tierDot{left:13px}.tierResult{margin-top:10px}}
+
+
+  .ov{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(4,7,18,.92);backdrop-filter:blur(8px);padding:20px}
+  .ovBox{width:min(380px,100%);text-align:center;padding:28px 22px;border:1px solid rgba(126,151,221,.2);border-radius:22px;background:#0d1528;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .ovBox h2{margin:0 0 8px;font-size:22px}.ovBox p{margin:0 0 18px;color:#9aa6c4;font-size:14px;line-height:1.5}
+  .gBtn{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:14px;border:1px solid #dadce0;border-radius:999px;background:#fff;color:#1f1f1f;font-size:16px;font-weight:600;cursor:pointer}.gErr{margin-top:12px;padding:12px;border-radius:14px;background:#fdeeed;color:#a32a22;font-size:13px;line-height:1.45;text-align:left}.gErr:empty{display:none}
+  #ubar{position:fixed;top:10px;right:10px;z-index:8000;display:none;align-items:center;gap:10px;padding:7px 12px;border-radius:999px;background:rgba(13,21,40,.85);border:1px solid rgba(126,151,221,.2);font-size:13px}
+  #ubar button{background:none;border:0;color:#7f8db0;cursor:pointer;font-size:12px}
+  .ovBtn{width:100%;padding:14px;border:0;border-radius:14px;background:linear-gradient(135deg,#5b7cff,#8a6bff);color:#fff;font-weight:800;font-size:15px;cursor:pointer}
+  .ovGhost{margin-top:10px;background:none;border:0;color:#7f8db0;cursor:pointer;font-size:13px}
+</style>
+</head>
+<body class="appBoot">
+<div id="bootScreen">
+  <div class="bootInner">
+    <div class="bootBrand"><i class="bootBrandDot"></i> GROWTH LAB · ANALYSIS ENGINE</div>
+    <div class="bootVisual" aria-hidden="true">
+      <div class="bootHalo"></div>
+      <div class="bootOrbit o1"></div>
+      <div class="bootOrbit o2"></div>
+      <div class="bootOrbit o3"></div>
+      <div class="bootAxis"></div><div class="bootAxis x"></div>
+      <div class="bootSweep"></div>
+      <div class="bootCore"></div>
+    </div>
+    <div class="bootKicker">PERSONAL GROWTH ANALYSIS</div>
+    <h2 class="bootTitle">Рост<span>ометр</span></h2>
+    <div class="bootText" id="bootText">Инициализируем модель роста…</div>
+    <div class="bootMeta"><span>ANALYSIS ENGINE</span><span id="bootStage">INITIALIZING</span></div>
+    <div class="bootProgress"><div class="bootProgressBar" id="bootBar"></div></div>
+    <div class="bootPercent" id="bootPercent">0%</div>
+  </div>
+</div>
+<canvas id="bg"></canvas>
+<div id="app">
+<div class="wrap">
+  <section class="hero">
+    <div class="badge">✦ GROWTH LAB · Оценка потенциала роста</div>
+    <h1>Каким будет твой <span class="grad">рост?</span></h1>
+    <p>Введи свои данные — система построит ориентировочную оценку взрослого роста и покажет диапазон, а не притворится, что умеет предсказывать будущее до сантиметра.</p>
+  </section>
+
+  <div class="card" id="mainCard">
+    <div id="formView">
+      <div class="inputGrid">
+        <div class="metric">
+          <div class="metricHead"><span class="metricIcon">↑</span><span>Генетический ориентир</span><em>01</em></div>
+          <label for="father">Рост отца</label>
+          <div class="metricInput"><input id="father" type="number" min="120" max="230" placeholder="175"><span>см</span></div>
+        </div>
+
+        <div class="metric">
+          <div class="metricHead"><span class="metricIcon">↑</span><span>Генетический ориентир</span><em>02</em></div>
+          <label for="mother">Рост матери</label>
+          <div class="metricInput"><input id="mother" type="number" min="120" max="220" placeholder="165"><span>см</span></div>
+        </div>
+
+        <div class="metric featured">
+          <div class="metricHead"><span class="metricIcon">◎</span><span>Текущий показатель</span><em>03</em></div>
+          <label for="height">Твой рост</label>
+          <div class="metricInput"><input id="height" type="number" min="50" max="230" placeholder="158"><span>см</span></div>
+          <div class="liveLine"><i></i> главный сигнал анализа</div>
+        </div>
+
+        <div class="metric">
+          <div class="metricHead"><span class="metricIcon">◇</span><span>Текущий показатель</span><em>04</em></div>
+          <label for="weight">Твой вес</label>
+          <div class="metricInput"><input id="weight" type="number" min="10" max="250" step="0.1" placeholder="50"><span>кг</span></div>
+        </div>
+
+        <div class="metric featured ageCard">
+          <div class="metricHead"><span class="metricIcon">◷</span><span>Этап развития</span><em>05</em></div>
+          <label for="age">Твой возраст</label>
+          <div class="metricInput"><input id="age" type="number" min="2" max="19" step="0.1" placeholder="14"><span>лет</span></div>
+        </div>
+
+        <div class="metric">
+          <div class="metricHead"><span class="metricIcon">⌁</span><span>Дополнительный сигнал</span><em>06</em></div>
+          <label for="foot">Размер ноги</label>
+          <div class="metricInput"><input id="foot" type="number" min="20" max="55" step="0.5" placeholder="40"><span>EU</span></div>
+        </div>
+
+        <div class="metric">
+          <div class="metricHead"><span class="metricIcon">↗</span><span>Динамика роста</span><em>07</em></div>
+          <label for="heightPrev">Рост примерно 12 месяцев назад</label>
+          <div class="metricInput"><input id="heightPrev" type="number" min="50" max="230" step="0.1" placeholder="165"><span>см</span></div>
+          <div class="hint">Необязательно — помогает оценить скорость роста.</div>
+        </div>
+
+        <div class="metric wideMetric">
+          <div class="metricHead"><span class="metricIcon">✦</span><span>Семейный контекст</span><em>08</em></div>
+          <label for="tallest">Рост самого высокого родственника</label>
+          <div class="metricInput"><input id="tallest" type="number" min="120" max="250" placeholder="195"><span>см</span></div>
+        </div>
+
+        <div class="metric sexMetric">
+          <div class="metricHead"><span class="metricIcon">◉</span><span>Расчётная модель</span><em>09</em></div>
+          <label for="sex">Пол</label>
+          <div class="selectWrap">
+            <select id="sex" class="selectNative" aria-hidden="true" tabindex="-1"><option value="boy">Мальчик</option><option value="girl">Девочка</option></select>
+            <div class="customSelect" data-select-id="sex" role="combobox" aria-haspopup="listbox" aria-expanded="false" tabindex="0">
+              <span class="customSelectValue">Мальчик</span><span class="customChevron">⌄</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accuracyPanel">
+        <div class="accuracyHead">
+          <div>
+            <div class="accuracyTitle">Точность+ · дополнительные данные</div>
+            <div class="accuracySub">Для прогноза используются текущий рост, возраст, вес, рост родителей, скорость роста за ~12 месяцев и стадия пубертатного развития.</div>
+          </div>
+        </div>
+        <div class="accuracyGrid">
+          <div class="accuracyField" style="grid-column:1/-1">
+            <label for="pubertyStatus">Динамика пубертата</label>
+            <select id="pubertyStatus" class="selectNative" aria-hidden="true" tabindex="-1">
+              <option value="late">Поздний</option>
+              <option value="not_started">Не начался</option>
+              <option value="early">Ранний</option>
+            </select>
+            <div class="customSelect" data-select-id="pubertyStatus" role="combobox" aria-haspopup="listbox" aria-expanded="false" tabindex="0">
+              <span class="customSelectValue">Поздний</span><span class="customChevron">⌄</span>
+            </div>
+            <div class="smallHint">Укажи вариант относительно сверстников. Это не медицинская диагностика: статус используется как небольшой корректирующий контекст к прогнозу и к ширине диапазона.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="formFooter">
+        <div class="smartNote"><span>✦</span><div><b>Анализ в несколько этапов</b><small>Система сравнит семейный ориентир с текущей траекторией роста.</small></div></div>
+      </div>
+      <button id="go">СМОТРЕТЬ МОЙ ПРОГНОЗ ✦</button>
+      <div class="notice">Это образовательная статистическая оценка, не медицинский диагноз. На итоговый рост влияют генетика, текущая траектория, сроки пубертата, питание, здоровье и другие факторы.</div>
+    </div>
+
+    <div class="loader" id="loader">
+      <div class="scan">
+        <div class="scanRing r1"></div><div class="scanRing r2"></div>
+        <div class="scanDot"></div><div class="scanLine"></div>
+      </div>
+      <div class="analysisLabel">GROWTH ANALYSIS</div>
+      <h2 id="loaderTitle">Считываем данные</h2>
+      <div id="loaderText">Проверяем исходные параметры</div>
+      <div class="steps">
+        <span id="s1">Семья</span><i></i><span id="s2">Ростовая норма</span><i></i><span id="s3">Прогноз</span>
+      </div>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+    </div>
+
+    <div class="result" id="result">
+      <div class="resultTop">
+        <div class="small">ОРИЕНТИРОВОЧНЫЙ ВЗРОСЛЫЙ РОСТ</div>
+        <div class="number" id="prediction">1 см</div>
+        <div class="countCaption" id="countCaption">расчёт будущего роста</div>
+        <div class="range" id="range">Диапазон: —</div>
+        <div class="futureGain" id="futureGain"><i class="gainDot"></i><span id="gainText">Потенциал: — см</span></div>
+        <div class="hint" id="modelLabel" style="margin-top:9px">Основная модель: Khamis–Roche</div>
+      </div>
+
+      <div class="heightTierCard" id="heightTierCard" aria-label="Тир-лист будущего роста">
+        <div class="heightTierHead">
+          <div><div class="heightTierEyebrow">ТВОЙ УРОВЕНЬ РОСТА</div><div class="heightTierTitle">Какой у тебя будет рост?</div></div>
+          <div class="heightTierSub">Границы: WHO 2007 · 19 лет · половые перцентили 1/5/15/50/85/95/99.</div>
+        </div>
+        <div class="tierRail" id="tierRail">
+          <div class="tierArrow" id="tierArrow" aria-hidden="true"></div>
+          <div class="tierRow" data-tier="0"><i class="tierDot"></i><span>Очень низкий</span><small class="tierRange">—</small></div>
+          <div class="tierRow" data-tier="1"><i class="tierDot"></i><span>Низкий</span><small class="tierRange">—</small></div>
+          <div class="tierRow" data-tier="2"><i class="tierDot"></i><span>Ниже среднего</span><small class="tierRange">—</small></div>
+          <div class="tierRow" data-tier="3"><i class="tierDot"></i><span>Средний</span><small class="tierRange">—</small></div>
+          <div class="tierRow" data-tier="4"><i class="tierDot"></i><span>Выше среднего</span><small class="tierRange">—</small></div>
+          <div class="tierRow" data-tier="5"><i class="tierDot"></i><span>Высокий</span><small class="tierRange">—</small></div>
+          <div class="tierRow" data-tier="6"><i class="tierDot"></i><span>Очень высокий</span><small class="tierRange">—</small></div>
+          <div class="tierRow" data-tier="7"><i class="tierDot"></i><span>Гигант</span><small class="tierRange">—</small></div>
+        </div>
+        <div class="tierResult"><i class="spark"></i><span id="tierResultText">Определяем категорию…</span><i class="spark"></i></div>
+      </div>
+
+      <div class="meter"><div class="meterFill"></div><div class="marker" id="marker"></div></div>
+      <div class="details">
+        <div class="stat"><b id="mid">—</b><span>родительский ориентир</span></div>
+        <div class="stat"><b id="current">—</b><span>текущий рост</span></div>
+        <div class="stat"><b id="remaining">—</b><span>ориентировочно осталось</span></div>
+        <div class="stat"><b id="percentile">—</b><span>текущий перцентиль роста</span></div>
+      </div>
+
+      <div class="growthChartCard">
+        <div class="growthChartHead">
+          <div>
+            <div class="growthChartEyebrow">ТВОЯ ТРАЕКТОРИЯ</div>
+            <div class="growthChartTitle">Твой рост vs референс</div>
+            <div class="growthChartSub">Точка показывает твой текущий рост, а линии — возрастно-половую референсную траекторию WHO 2007.</div>
+          </div>
+          <div class="growthChartBadge">WHO · 5–19 лет</div>
+        </div>
+        <div class="growthChartWrap" id="growthChartWrap" aria-label="Интерактивный график роста. Проведи пальцем по графику, чтобы плавно посмотреть возраст и рост.">
+          <canvas id="growthChart"></canvas>
+          <div class="growthChartHint" id="growthChartHint">Проведи пальцем по графику</div>
+        </div>
+        <div class="growthChartLegend">
+          <span class="legendItem"><i class="legendDot"></i> Ты сейчас</span>
+          <span class="legendItem"><i class="legendLine"></i> медиана WHO</span>
+          <span class="legendItem"><i class="legendLine dashed"></i> ±1 SD</span>
+        </div>
+        <div class="growthChartFoot">
+          <span><b id="growthChartPosition">—</b> — положение относительно референса</span>
+          <span>Референс — статистический ориентир, не диагноз.</span>
+        </div>
+      </div>
+
+
+      <div class="heightCompareCard" id="heightCompareCard">
+        <div class="heightCompareHead">
+          <div>
+            <div class="heightCompareEyebrow">СЕЙЧАС → БУДУЩЕЕ</div>
+            <div class="heightCompareTitle">Каким ты будешь?</div>
+            <div class="heightCompareSub">Твой текущий рост и рассчитанный взрослый рост показаны на одной общей шкале — чтобы разницу было видно сразу.</div>
+          </div>
+          <div class="heightCompareDelta" id="heightCompareDelta">+0 см</div>
+        </div>
+        <div class="heightCompareStage" id="heightCompareStage" aria-label="Визуальное сравнение текущего и прогнозируемого взрослого роста">
+          <div class="heightCompareGrid" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="heightCompareScale" aria-hidden="true">
+            <i style="top:0">200</i><i style="top:25%">150</i><i style="top:50%">100</i><i style="top:75%">50</i><i style="top:100%">0</i>
+          </div>
+          <div class="heightHeadGuide current" id="heightHeadGuideCurrent" aria-hidden="true"></div>
+          <div class="heightHeadGuide future" id="heightHeadGuideFuture" aria-hidden="true"></div>
+          <div class="heightCompareMeasure" id="heightCompareMeasure" aria-hidden="true"><div class="measureLine"></div><span id="heightCompareMeasureText">+0 см</span></div>
+          <div class="heightCompareConnector" aria-hidden="true"></div>
+          <div class="heightComparePeople">
+            <div class="heightPerson current" id="heightPersonCurrent">
+              <div class="heightPersonLabel">
+                <span class="eyebrow">СЕЙЧАС</span>
+                <strong id="heightCurrentValue">— см</strong>
+                <small id="heightCurrentImperial">—</small>
+              </div>
+              <img class="heightPersonSilhouette" alt="" aria-hidden="true" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAVkAAAObCAYAAAD5TfJNAAAt/0lEQVR4nO3dy5Ub2ZVw4S2tMuB4UNcD0QOVB9UeyKbfg5YHKg8oD1LzHlxNenw86H+ATAHIBJB4xOM+9rcWF1kkiwSRETtO3AgAf/qf//0/pBsK8Nv79wC/vv83wE/g359+f33/+brqo5I68cveD0DNCg5h/QH8lWNk4/0b779WOPfr+/dvHEKbKzw2qRt/cpKdVnAIZFz59cIhrj+++X2fJYe4vgH/5Bjaj++lqRjZOQRfQ1k4n1Dv+X8ekZwH9iO4l35dGpaRHVtw+ZT/9Ndig8eRfA1qxUlXEzCyYwrO4/qD7YJ6r+TrpPuGsdVgjOx4gsPV/99pM66XJMd13D843J2Qez0YaUneXTCW4BDYv71/H/s9lIcE5weEwKlWg3CSHUfQZ2A/S5xqNRAn2f4Fx/XX3+k7sPB1qgVDq44Z2b4F/a2/3is4vrIMDK06ZWT7FYyxPHBLYGjVOSPbn2Cs5YHvBId/Y3Jcq5W6YWT7EbR/7+tagsO/9wfecaDOGNk+BOOuvd6rcPj3Jy4bqCNGtm3BXEsDtwSuz6pDRrZdgdPrZ4GhVWeMbLsKh8D+F8b1VGBo1REj26bgeKEndnwcrQq840Cd+PPeD0AXFW6/16s8EKkTRrY9gfG4V8ELgmqcywXtKTjF3itwfVaNM7JtCZxiHxUYWjXMyLal4BT7jMDQqlFGth2BU+wrAkOrBhnZdhScYl8VeGuXGuPdBW0InGKXEvhcqiFGtg0Fp9glFXw+1Qgj24bA9yZYUuDzqUYYWUlakZHdX+DUJQ3LyO6v4PqhNCwju7/ASVYalpHdV2BgpaEZ2X0VXCqQhmZk9xU4yUpDM7KStCIjK0krMrKStCIjK0krMrKStCIjK0krMrL7Sg5vLp27PorxJD6vaoSR3VcF/vn+vZZT8XlVI4zsvhInrjUkPq9qhJGVpBUZWUlakZHdX+KprTQsI7u/ihdplpR40FJDjOz+EqOwpIoHLTXEyLYhMbRLSXwu1RAj24aK05c0JCPbhsTpSxqSkZWkFRlZSVqRkZWkFRlZSVqRkZWkFRlZSVqRkdVoAijv30u7M7IaTQH++v69tDsj24bA6Wspgc+lGmJk21Bw+lpSYGjVCCPbhsAoLKngQUuNMLIaUeBBS40wshpVYGjVACO7v8AYrKHgkoEaYGT3VzAGawg8eKkBRnZ/gTGQhmVkJWlFRlaSVmRkNarEj/RRA4ysRlXxwynVACOrUSVOsmqAkd1fYgykYRnZ/VU8rZWGZWT3lzjJSsMysm1IDO2SEp9PNcLItqHiksGSKj6faoSRbUPi5LWkxOdTjTCy7UgMwxISn0c1xMi2o+Ip7hIqPo9qiJFtRwJv799yx8fRs8TnUI0xsm2pwB/AT4zEo5LD8/YHTrFqyC97PwCdSQ6h+PAbvs/svSoeoNQgI9uexNA+IjkE9icuE6hBRrZNiaG9R3JcInjDZQI1yMi2KzG0tySH5+fvuESghhnZtiWG9pLEwKoTRrZ9iaE9lRhYdcTI9iExtB8q3kWgjhjZfiSHsASHjxD/sdsj2U/iiw3UGV+M0Jdk7tflV3zJrDpjZPuTzBnaxClWHTKy/anMOc1V5vx3q3NGtj/JvJNsZb5/tzpnZCVpRUa2T8lcU10y179XAzGyfarMtT5Zmevfq4EY2T4lc11pT5xk1Skj26+K053UPCPbr8TpTmqeke1bYmilphnZvlXGXzJIPJCoY0a2b8n4AaqMfyDRwIysWpeMfyDRwIysJK3IyPYvcdKTmmVk+1dxzVJqlpHtX+IkKzXLyErSioysJK3IyKp1weGDI2PXRyE9yciqdQX46/v3UneMrFoXOMmqY0ZWklZkZCVpRUZWPQhcMlCnjKx6UPDilzplZNWDAH68f4sdH4f0MCPbv2COU+mC06w6ZGT7F8wR2cBpVh0ysupJwWlWnTGy/QvgV+aY7gKnWXXGyPYtmC86BadZdcTI9iuA34DfmSs4wXwHFnXMyParcAjsb8wXm8K8/3Z15pe9H4CeEsw9zQWHwH74iZ8MoUYZ2f4Ecy4TfBYYWnXAyPan4Knyh+DwPCSHzzl72+2RSFcY2b4Ecy8TXBIcno/f3v+74kSrhhjZfgQuE1xTgL8Bf+Hw8ehvGFs1wsj2o+AywTXBYZot79+/AX/gOq0aYGT7ELhMcI/gGNt4/7mfGFrtyMi2L3CZ4FHBcY02cPlAO/rT//zv/+39GHRdcIjF33CZ4BnJ8a4D12q1CyPbrsDALiUxttqJkW1TYGDXkBhbbczItiU4XiH3ToL1JOexrSc/l3s8II3LyLYjOF7g+sEcn3awt+Q8sE63WpyR3V/g9NqCxKUErcDI7itwem1N4lKCFmRk9xN4catliUsJWoCR3VZwnFYLLg/0Ivm6lJAnv5af/wfpg5HdRnBcd/34fKrA5YHeJMfY/vv95z7+u2JsdYGRXU9wHtO/4rrrKJLzSfYNlxN0hZFdXuDUOpvEi2W6wsguJziP6w8M62wSL5bpEyP7usC46qvE+26FkX1W4Hqr7pO4lDA1I/uYwPVWPSdxKWFKRvY+gUsCWk7idDsNI3tbYFy1nsTpdnhG9rLAuGpbydfp9vTnc+sHpGUY2XOBcdW+kvOoVpxwu2ZkvVNAbUtcv+3azJENvFNA/Uhcv+3SjJENXBJQ3xKn227MFNnAuGosidNt80aPbOB6q+aQ+DLeJo0a2cD1Vs0pMbZNGS2ygUsCEpzH9g/gJ4Z2F7/s/QAWEhhX6VRwvh8ETrW76HWSDc4jWjCu0jXJIa4/gb9ziK020tskG3xdaz39+dj6AUkdCA77DMC/cJrdVE+RDQ6f7Po7TqzSMwqH/SdxjXYzvUQ2OAT2b/gR2tKzgsP+8+EnhnZ1rUc2OC4P/I6BlV4VHPaj5Hj3gVbUcmQDlwekNQSHfeoHrs+u7s97P4ArguPywH9x2BhirwcjDahwfvFYK2kxsoHrr9LaAs8ON9FiZAuuv0oaRGuRDY5rRbHj45BmEDjNrq6lyAbHC11lzwciTaLguuzqWopswWUCaUuBk+zqWols4DKBpAG1EtmCpy3SHgKn2VW1EtnAL7S0h4IDzqpaiGxgYKW9BO5/q2ohsgWPpJIG1UJkA4+k0p4C98HVtBBZSfsqeDa5mr0jG3gElfYWuB+uZu/IFjyCSi0IDO0q9o5s4BdWakHBgWcVe0dWUhsCB55VGFlJWpGRlaQV7RnZwNMTqSWB++Ti9oxswYV2qSUF98nFOclK+hC4Ty7ONVlJWpGRlaQV7RXZwNMSSRPYK7IFF9ilFgUOQItykpV0quAAtCjXZCWdChyAFmVkJWlFRlaSVmRkJX0WuGSwmD0iG/gFlFpW8OLXYvaIbMEvoNSywEFoMU6yki4J3E8X4ZqspEsKnnEuYuvIBh4dpR4E7quL2DqyBY+OkibiJCtJK3JNVtI1gUPRy4yspGsKLu+9zMhKuiZwkn2ZkZWkFW0Z2cCjoqTJbBnZgus7Um8Ch6OXOMlKuqXgcPQS12Ql3RI4HL3EyErSioysJK3IyEr6TuCSwdO2imzgF0nqVcGLX0/bKrIFv0hSrwKHpKc5yUrSilyTlaQVGVlJ9wg8G32KkZV0j4LXVZ5iZCXdI3CSfcoWkQ384kgjCNyXH7ZFZAueZkgjKLgvP8xJVtK9Avflh7kmK0krMrKSHhE4zT7EyEp6RMF12YesHdnAo540ksB9+iFrR7bgUU/SxJxkJWlFrslK0oqMrKRHBZ6h3s3ISnpUwWstdzOykh4VOMnebc3IBn4hJE1uzcgWPKWQNDknWUnPCNy/7+KarKRnFDxTvYuRlfSMwEn2LkZWklZkZCVpRWtFNvBUQhpd4H7+rbUiW3BRXBpdwf38W06ykp4VuJ9/yzVZSVqRkZX0isBp9iYjK+kVBddlbzKykl4ROMnetEZkA590SQLWiWzB0wdJApxkJb0ucJ+/yjVZSa8qePZ6lZGV9KrASfYqIytJKzKykrSipSMbeNogSf+xdGQLLoBLMwocsC5ykpW0hIID1kWuyUpaQuCAdZGRlaQVGVlJWpGRlaQVLRnZwDUZSTqzZGQLXl2UZhY4aH3hJCtpKQUHrS9ck5W0lMBB64ulIhv45ErSF0tFtuBpgiR94SQraUmBLTjjmqykJRU8qz1jZCUtKXCSPWNkJWlFS0Q28Mgl6SiwCf+xRGQLrsFIOirYhP9wkpW0tMAm/IdrspK0IiMraQ2B0yxgZCWto+C6LPB6ZAOPVpK+CmwD8HpkCx6tJOkqJ1lJWpFrspK0olciGzjFStJNr0S24HqspOsCBzEnWUmrKTiIuSYraTWBg5iRlaQ1PRvZwCOUJH3r2cgWXGuRlpJAff9eg/nlyf8vcJKVlpDAT+BfwF+A33C/GoprstK+KvAH8N/v39cdH8sagskHMiMr7Ss5hLUCb+/fcqfHsobC5EuLz0Q2mPzIJC0kOV+LrcA/GWuaDSbvxTORLUx+ZJIWUjmPauIFsOE4yUr7SeaIajBxM1yTldqSjBfewsRnv0ZW2kdyOaYV12WH8mhkg4mfLGlBlcsxTcabZKf2aGQLE4/90oISYzoFJ1lJWpFrspK2EEw6oBnZo8TTN7UhGW9bLEy61GhkD5LDm3T8g7Gu6qpNye2IVrzDYBiPvAtXMO6TVDm8OUcCP/Z8IJpC5XZEk/Em2Wk9MskWxhz3k+Mbc1TcuLW+ZM7tLBh3ULvqkcgGYz5BleNUcfpjScsqjDmo3fTsm3aPJPn6Tkh58XdKekUw5qB2072TbDDmk5MYVbUpcdscwr2RLYw55ldcHlCbKm6bQ3CSdVpQmxK3zSF4n6wkrcjIStpSMOZZ8VX3RDYY80lJPB1T25LxttHCmNd3rronsoUxn5SKFxbUtsp422gw5tB2lZPs1ynh2s9LS0ju374e+b1qlGuyX1XGmx7Ujorb11SM7FeJ04PWkzy2fT36+3sQjHl2fNF3kQ0mejKkBlXGm3wLY17nuei7yBbGfDKS8aYDjSkZb1sNJhreZp1kK9eng2DMf7OkHcy6Jptcnw4KY07vknYwa2RvCZxk1ZZkvCWDaRhZqX2V8S5+TcPISu1Lxptkg0nOGG9FNhjzSUjG22Cl3hQmufZxK7KFMZ+Eiqde0t6CMYe4L5xkJWlFrslK0oqMrNSHxDOwLl2LbDDmUoHUq4rXErp0LbKFMS96Sb1KxptkgwmGudkm2eT2hhqM+e+WWlSYYJibbU22cvuUqzDBF11qRDDBUDNbZBMnWUkbmi2ykrQpI3sUOMWqbcl4F7+GN1Nkk9sbaMH1WLWt4m1c3ZkpspXbG2jgJKu2JU6y3bkU2WDM2CRuoJI2NlNkpRYE7l9TmWW5IPHWLbWh4Nr/VK5Nsr8yVnAqvghBbQg8oE9lluWCxElWY0jGurYQDL7vzbJcII2iMtZtXIXBzyKNrNSXxEm2K0ZWklY0Q2QT12Ml7WSGyFa8s0DSTj5HNhhvqkucZNWW4LVtLhlrXXZonyNbcKqT1lZ4bT+rjHWHwdBmmGSl1gROstOYYU32lsCDiqQVjR7ZxPeQlbSj0SNb8T1kJe1o9Mgmrl1pTInbdhdGj6w0qop3GHRh5sgGLhWoX4mTbBdmjmzBi17aT+BBfgojRzbxlV5qV8GD/BRGjmzFNSu1K/AgP4WRI5tcn2QDN3BJGxg5srcUPFXT/gIP9sObNbKBG7f2V/BgP7xZIyu1IPCNYoZnZKV+Vby427xRI5t40UvjS5xkmzdqZCvXj/AF18EkbeQ0ssE4E17iJKs+BG6PQzuNbMEJT9pawf1uaCNOsonrVOpHMMZ+pytGXJOteMVVUiNGjGzieqykRowY2VsKrn9J2tBokU18e0P1J3C7HNZoka24Hqv+FJ4/w0q80Nu00SKbuMGpP8Hzk2zFwaJpo0VWmk3iYNG0mSIbuO4laWMzRbbgnQWSNjZTZAMnWUkbGymyiWtTkhozUmQrXmVVvwLPtIY0UmQTX06rfhW8ZjCkkSJ7S8ENWG0Lnh8EEpfKmjVLZAMnWY2r4lJZs2aJrDSyxEm2WTNENnCKlbSTUSKbXD+SF1yPlbSTUSJbub4mFTjJStrJKJFNXJNS/wIHguGMEllpBAWXtoZjZKV2BE6ywxkhsomv9JLUqBEiW7l+0avg6Zf6EjgYDGWEyCZOshpH4bnBIPHib5NGiKw0kuC5waDiS2ub9BHZwIlP6lniJNukj8gWXLuUpMX1PskmHr0lNaz3NdmKL6fVeAK33WH0HtnEN4bReApuu8PoPbK3BE4D6lPgtjuMniObuB4rqXE9R7bifYGSGtdzZBNf6SWdSjy7a07Pkb2l4IUDzafi2V1zRo1s4CSrvgWPb8OJk2xzRo2s1LuCZ2NDMLJSmwLPxobQa2QTT4skdaDXyFZ8Oa2kDvQa2cSX00rqQK+RvSVwktUYArfl7o0YWWkUBc/KumdkpXYFTrLd+zOHL2LBL6QkLe7PwG/0dUqS+J4FkjrR4yRbuX77VqGvA4akwfW4Jps4yUrqRI+RlaRuGFmpbYFnZ13rLbKJ71mguRQeu86QuI80pbfIVnxTYs0leGySrbiPNKW3yCZe9JJuSZxkm9JbZG8pePuWxhQ4QHRrpMgGbogaU8EBolsjRVYaVeAA0a2eIpu41iSpMz1FtuJVU0md6SmyiZOspM70FFlpZoHrsl0yslIfCt5h0KVRIht4lNfYArfxLvUS2eT2emzBo7ykBvUS2crtOwsCj/KSGvRn4Ffaj1PinQWSOvQLh8/4in0fhiSN6eMzvmLfhyHpDoH7a3f+jKfhUi8KXuDtzgiRDTy6aw6B23p3RlguKHh0l9SoESIb9P9vkJaU9H+GOowe7pNN3GCkR1T6ece6ZPD9u4fIVvrZYKQWJP2EqzL4/t1DZJN+NhhpbcFYy2PJ4Pt3D5GVdFQY50JvMnhgwchKvQm+n2Tv+T0tqAy+VAD9RzboY2OStlRof9pN4O39W+74OFbX+4sRCu1vTNKWAvjx/i12fBy3JPAT+IPBp1g4RPYn/f5DAydZ6UNweMOn32l78KgcAvuTfge8u/2Zw5rIGxP8Y6VBBJeHi8IhsL9d+LVWJJMsE3z4mGSHX3yWBlK4vEwWtH9mV5msNx9rsm9MdGSROhd8jemln2tR0vd1oId93F1QaffoEvSx8Uh7KvRxETiYbH/+iGzS7tGl0MfGI+0p6CNehcn25x7ukw0u35IS9LFRSWsIjtv/6Y9bF/TzWBfRQ2Th8tHv0s9Jsygct//TH6sxv+z9AO4U9LvQL60hON/+T3+shpxOskm767JgVCV16DSylXbvMABPiaRTSdtDkd71siYLTrLSqcphKEr62y+C/h7z004jW2h/Ugwm+uJIVyTHFxAF7e+3nxX6e8xPO41s0H7AChN9caQLkvN3sAra328/C/p7zE/rabkAJvviSJ8kh8D+nUnewWoEvUX2VOLCv+aRGNgu9RzZykTvSanpVdzeu9TLixEuSQ4b3IffcBlB40o8c+tSz5EFQyupcT1GNjhe/EoMraSG9RjZwuE2rrf3b2BoJTWqxwtfweXbuJKJPgFT0wm8fbFLPUb2lsSLAxpTwRfidGm0yEqjCpxku2RkpfkknvFtpscLX5KelxyuXfwL+AteJF5dT2/afa9kjH+H9J3g8SWEyuHi8H+z30XiZKJ9tKc37b5XZYx/h/SdwmMXw5LjrY+V/UJXmWgfdZKV+hU8NslW2ohbMtE+6oUvaR7J/nFr4TFsau/IJpM94dJOkjb2tUob0/Rm9oxscrjK+Q8mesKlFwTP3ytbaSNuSRux38znyCbbPQGVw9XNPzgsxG/xd0o9KxwvdAWPBTfZP24tPIbNfY5sZbujXb7/PW8b/p1Sz4LzwPb2MtvKhPv6pUn2jW0nyz3+Tql3QX8vs02cZIFtjjbJ+ZO9xd8pSZu79LLaZP2jTeU8qlv8ndIIAvhx8uN7JF/3r2DbSfjSY5jCXu9dkEz6hEsvKsDfTn58j8rXM8XCdmu6ycTv9dzrG8QE5x9B81lyjHhs8HikrQTHSfZeyb6TbGXiT9q9dp9ssv2k+cjfWbh9FK64xitdE2wX2GTyC9vXIlvZPlKP/J3B7Y0kcTlCgsv7QmG7pYLK5APPrUn2jfWOPsHXSCaGUVpS8nUtNDgsN/xg/Uk2mXyKhdsvq62sdwQq9HcjtdSbyte10IJT7KZuXfhK1pssg+ufOPvxd37+NbUnOe5ABb9mLUkuT5HBtuuxlYmnWPj+DWKSbZ+kike+XiSHCen/AX/Hr1krkkNY/8HXW6YCA7u5727hqhyi94PHbxv5TvD1NqzEL0wvKoed+B8cvo5/wWl2T8n5e4G8cb4vBYfP8/qd9ZcKkonvi/3su8gmx1OOwrI7UOGwNvTx55/+nRWXDFqWnJ+KVtY7GOuy5PJL09/4OqgEh8D+jfU/ODE5BPbvTHpf7Gf3vBihss4OFCd/ZuXrxrL036flVL6+LPqNdQ7GuqxyCNnb+38nl88Cg+0C+/G4pn3hwSX3vGl3st5tGIWvVzrX/Pu0jOTrDl1xPX1LyWEf+fn+7Y39A/vxmC49lmnd+8kIlXWOTsHle/a++/sS1273klx+7q/9vPYRbLtE8Mbli23Tu/e9C5JD8ILD1PljwcdQOCzGf/wdefLjj7/7B8dpt3L4gvrF3EfFibV1wTaBTW5fbBOPvUFMss66W3DYED785Dy0lUNk//r+634x95Vcf+5Pfy02eTS6pHAYXH5jna9DYlzv9ui7cFUOE2Sw7Bfw48/7+PEbxy/ax4/fTh5DLvT3alkVL1ruLVjvZbOJcX3Yo5FNjqfxsE5oC8flgJ8cp9q3B/+8xKlqa4k73d4Ky79sNjGuT3vm/WSTdUP7g/PliJ8898WsOFXtIfHgtpdg2Sk2Ma4ve/ZNu5P1QgvX12kfkbhB7KHiwW0LwddXTBaWmWIT47qYVz4ZIbl8B0C88GeeCl4PrbaXuENuofD1FZPB8/tgcvy6VYzrYl79+Jnk/A6Apa9oBoa2Jcl9O93p74vVHs3cgteGmuT6J0Z//jW9YInP+Eq+HvF+w9COqHLfPbIfv+8HLhlsKbl9cDv99YqfGL2JJT9IMVlv+SAwtC1I7p9k3/C9DLZWuXyLZXK+xloxqptZ+tNqk68vIPjBMjtacNhwkvP7ZtWmitPs1pLzQae8/7jiGutu1vhI8OT8BQQ/OF7xDF4LbnD5nbvUnsSv0R6S46ATJz9X8WuxizUi+yE5j21wfotJ8FxwP/6MN5xmW5d4AWwPiftGM9aM7Ifk/BaTN5YLrtpWcclAk9sisqeS14Nb8V2g9pA8fsr5zP8jDWXryJ5Kvg8uJz8Hhx32J74p8B4qHtxaE3x91Zcas2dkTyWXgwvH6ML5FVJtK3luKj39/2KxRyPw+kQXWonsqeR8g4mT/654xO5NxXXZtQRey2hei5H9LPEo3bPEg6Mmdu9nfEmvSAytJjV6ZBN37hZUvGimSY0e2Yo7dwsSD3aa1OiRTdy5l5C8/jwu8WdI3Rk9slpG5fUzgiX+DKk7Rlb3SJxkpacYWW0pMbSajJHVliouGWgyRlZbSpxklxb4qq+mGVmpb4VlPgZcKzGy2lriNLukwEm2aUZW30mWjWLFdVlNxMjqO5Vlo5g4yWoiM0Q2cad+ReLzJz1thshWPD1tTWK4NYkZIpu4Q7em4oFPk5ghsmpP4oFPkzCykrQiI6tbkvUmzjX/bKkZRla3VNZbO13zz55N4AsSmmVkdUuy7iT79v5tjT9/JgVfWtssI6s9VZxmlxA4yTbLyGpPieuyGpyR1d4SQ6uBGVntreKSgQZmZLW3xElWA5slsok7sqQdzBLZiqekLUs8CGpQs0Q2cSduWcWD4KsCb+Nq0iyR1eOS7Q5MW/5doyr4goQmGVldU3G67EngJNskI6trEqdL6WVGVq1IjLoGZGTViorLExqQkVUrEidZDcjIqiWJodVgjKxaUnHJ4BWBdxg0x8iqJYmT7CsK3ivbHCMrjSNwkm3OTJFNnJJ6kPh10kBmimzF9b57JfuFruLXSQOZKbKJE9K9KvuFLvEDFjWQmSKr+yX7HpAqTrMahJFVixLPOjQIIytJKzKy0lgCb+NqipFVqxKXDJ5R8AUJTTGyalXFi1/PCJxkm2Jk1arESVYDMLKStCIjK0krMrJqWeKSgTpnZNWyihe/1LnZIps4GfUk8eulzs0W2YqTUW8SQ6uOzRbZxB22NxUPjOrYbJFVfxIPjOqYkZWkFRlZ9SBxmn1E4Etrm2Fk1YOK67KPKPgmMc0wsupB4iT7iMBJthlGVp8lBk1ajJHVZ5U2T80T468OGVl9lrQZs0qb8ZduMrLqRdJm/KWbjKwkrcjIqieJ06w6Y2TVk4rrsuqMkVVPEidZdWbGyCbuqJI2MmNkK55yStrIjJFNnGR7lvj1U0dmjKz6VvFMRB0xsupN4iSrjhhZ9SgxtOqEkVWPKi4ZfCfw7Q6bYGTVo8RJ9jsF37i7CUZWvUoM7S2Bk2wTjKx6VXHJQB0wsupV4iSrDhhZSVrRrJFNnIIkbWDWyFZczxtB4sFSjZs1sok75wgqHizVuFkjqzEkHizVOCMrSSsystK4Al+QsDsjq94lLhlcU/CltbszsupdxYtf1wROsrszsupd4iSrhhlZSVrRzJFNnIA+S3xOpEXNHNmKa3mfVfp8ThIPDmrUzJFN3DE/S/p8Tip9Hhw0gZkjq3EkfR4cthB4h8GujKxGkRjaSwreK7srI6tRVFwyuCRwkt2VkdUoEidZNcjISuMLnGZ3Y2Q1ksRp9pKC67K7MbIaScV12UsCJ9ndGFmNJHGSVWOMrCStyMhK0opmj2zi6eVoEr+mlwSuy+5i9shWvFAymopf00sK3mGwi9kjmzj1jCbxa3pJ4CS7i9kjK0mrMrKStCIjqxElLhlcErhksDkjqxFVvPh1ScGLX5szshpR4iR7SeAkuzkjqw+JYZIWZ2T1oTLWKXbiQeOSwGl2U0ZWH5KxolQZ66CxlILrspsyshpVMtZBYymBk+ymjKw0n8DQbsbISvMpuGSwGSOrkSUuGVwSOMluxshqZBUvfmlnRtZpZ2SJX1vtzMg67YwuMbSXBC4ZbMLIuhOOruJB9JKCF782YWQ1usSD6CWBk+wmjKwkrcjIStKKjKxmkLhkcEngksHqjKxmUPHi1yUFL36tzshqBomT7CWBk+zqjKzACEmrMbKCOU6nEw8k2oGRFcwRoMr4B5JnBC4ZrMrIahbJ+AeSZxS8+LUqIyvNLXCSXZWRlRQY2tUYWc0kccngkoJLBqsxsppJxYtflwROsqsxsppJ4iSrjRlZSVqRkdVsEqdZbcjIajYV12UvCVyXXYWR1WwSJ9lLCt5hsAojqxklhvazwEl2FUZWM6q4ZKCNGFnNKHGSvSRwml2ckZX0oeC67OKMrKQPgZPs4oysZpW4ZKANGFnNquLFL23AyGpWiZOsNmBkJWlFRlbSqcCLX4sysppZ4pLBZwVv41qUkdXMKl78+ixwkl2UkdXMEidZrczIStKKjKzAU0RpNUZWMPfFjsQlg88CD7qLMbKCuXeqihe/PivMe9BdnJHV7BIn2c+CeQ+6izOyki4JDO0ijKzkNHtJwSWDRRjZg8SdbGYV12U/C5xkF2FkDyruZDNLPMhqJUb2IHEnk7QCI6sPwdynh4kH2s+CubeJRRhZfSjMfaGj4pLRZ4W5t4lFGFl9COaeWhIn2c+CubeJRRhZSVqRkZWkFRlZ6ShxyUALM7I6Fcy9Blfx4tdnwdzbxMuMrE4V5r6anDjJflaYe5t4mZHVqcCpRecCt4mXGFlJWpGRlaQVGVnpXOK6rBZkZKVzFe8w0IKMrHQucZL9LPDi19OMrD4L3KF0ruBtXE8zsvqs4A6VOM2eCjzwPs3I6rPAHariuqwWYmSPEqcXHSRuC1qIkT2qOL1IWpiRPUqcXiQtzMhKlyUedE8FrtU/xchKl1VcPjpV8K6TpxhZ6bLESfZU4CT7FCMrSSsystJ1idOsXmRkpesqrsueClwyeJiRla5LnGRPFbz49TAjq0sCJxZ9FbhdPMzI6pKCE4u0CCOrSwInFmkRRla6LXFdVi8wsucSdyidq3iHwanAs5yHGNlzFXconUs88J4quF7/ECN7LnGHkm4JnGQfYmQlaUVGVpJWZGSl7yUuI+lJRlb6XsULonqSkZW+lzjJ6klGVtKjAu8wuJuRlfSogvfK3s3IfpV4aqivEreLD4GT7N2M7FcVL3KAO9JnFbcLPcHIfpU4sYCnhJ8lbhd6gpHVNYGTrPQyIyvdL3Ga1YOMrHS/iuuyHwLPdO5iZKX7JU6yHwqu2d/FyEp6RuAkexcjK0krMrKStCIjKz0mcV1WDzCylyXuSLqs4h0GHwLXZb9lZC+ruCPpssQD8IfAyH7LyF6WuCNJWoCRlfSsAH7FSfYmIyvpWYHLBd8ystLjEpeTdCcjKz2u4oXRD4HT7E1GVnpc4iT7oeB7GNxkZCW9InCSvcnIXpc4rUh6kZG9ruK6m65LPAjrDkb2usSdKPBU8JqKB+EPgdvJVUZWtwTuPNckHoQ/FLz4dZWR1S2JIdH3Ag/GVxlZ3ZIYWeklRva2ZO7IBE4o0kuM7G2VuS9uFFxruyWZ+yCsOxjZ25K5d6LASfaWytwHYd3ByErPS+Y+COsORlZ6TWJowbOeq4ys9JqKSwbg+v1VRvZ7iZOKrkvcPsBJ9ioj+72Kk4qkJxnZ7yVOKpKeZGQlaUVGVnpd4tmOrjCy0usqrtvrCiOr7wReNf5O4iQLbisXGVl9p+D9j7pPwW3lCyOr7wROJ7pP4LbyhZG9T+LpoKQnGNn7VLywodsSD8S6wMjeJ3EH0m0VD8TgksEXRlZaRuKBGLz49YWRlbSkwEn2jJGVpBUZWUlakZGVlpO4LqtPjKy0nIp3GIDrsmeMrLScxEkWvMPgjJG9X+IOJN0jcJL9DyN7v4qngvpe4sFYJ4zs/ZJ5d57AyeReFQ/GOmFkdY+Ca2z3SuDt/Vvu+DjUCCOrewROso+oOM3qnZGVlpfMu7T0IfDADBhZSesouMQEGFlJ6wicZAEjK60lcclAGFlpLRUvfgkjK60lcZIVRlaSVmVkH5M4nUj3Crz4ZWQfVHGdTfdL5j4oF7yNy8g+KJl7p9FjKnMflAMnWSMrrSjxoDw9IytJKzKykrQiIytJKzKy0rqSuddlg8kvfhlZaV2Vue8wKEx+G5eRldaVOMkWnGT1gGTunUaPS9xmpmVkH1eZ+/RPj6u4zUzLyD4ucSrRYxK3mWkZWWkbybyhDSZelzWy0jYq8y4ZFCa+w8DI6l7BxNPIAhIn2dj1UezEyOpehYmnEelZRlb3CiaeRqRnGdnnJPOe+knPCCY9SBvZ51TmvYih5yXzHpwLky43GdnnJPPuLHpeZd6Dc+AkK2lliQfn6RhZSVqRkZWkFRlZaVvJvEsGwYTrskZW2lZl3otfhQnvMDCy0rYSJ9nY9VFszMhK0oqMrCStyMhK20vmXTKYjpGVtleZ9+LXdIystL1k3kk2mOzil5F9XjLvjqLXJXNuP4XJbuMyss+reMqn51Xm3H4CJ1ndKZlzEtEyErefKRhZSVqRkZX2kzjNDs/ISvupzLkuOxUjK+0nmXOSDSa6+GVkJW2tMNFtXEZW0tYCJ1lJG0nmXDKYhpGV9lXx4tfQjOxrEqcQvSZxGxqakX1NxSlEekYwybqskX1N4hQiPaMwyR0GRlbSHgInWUkbSTwjGpaRlfZXcW1/WEZW2l/iJDssIytJKzKykrQiI/u6xFM9vS5xOxqSkX1dxYsWel1lvu0omOA2LiP7usQJRK9L5tuOChO8IMHIStpL4CQraUPJfNPs8Iys1I7KfOuywzOyy0icQPS6xO1oOEZ2GRUnEOkZweDrskZ2GYkTiJaRzLUtFQa/w8DISm2pzHVWFDjJStpQMtckOzwju5zEnUPSJ0Z2OZW5TvMk3cHILidxkpX0iZGV2pN4wB6GkZXaU3HpaRhGVmpP4iQ7DCMrSSsyspK0IiMrSSsyslKbEtdlh2BkpTZVvMNgCEZ2OcHgb3ShTSXw9v4td3wcepGRXU5h8Lds0+Yqc0yzwcADipFdTjDwhqJdJHNMs4WBBxQjK7WtMv40G8CP92+x4+NYhZFdRuAUq3Uk80yzvwO/Mdh+9MveD2AQhYFPd7S7ymGa/fH+bUTBIbAffjLIQcXILiOYY5INjv/O3PFxzCaZ457ZYMDQGtnXBXMEFo4T+9v7N20nOYY2dnwcawsGC62RfV1hnqWCYJ4DSmsq4y8ZfAgGCq2RfU0w8FVRNSWZY8ngQzBIaI3s84LDRvA7c0yx0taCAUJrZJ9XGPSWk28EXvzSdoLOQ+t9ss8J5l0mKMyzBt2SYN718KDjs0Yj+7ig4y/4AoJ5d/Y9FeY+uAWdDjZG9jHBIbB/Y75lAu0r8OBW6HCJzjXZ+wUG9kPguqy2F3S4Pmtk7xMY2FMFX5SwpcAp9kPQWWiN7PcCA/tZ4E6/pcLc67GfBR2F1sjeFhhY7S/woPZZ0Elojex1gYGVWhYcQxsclq4qjcXWyF4WGFipB8FhHy0cIvsHjU21RvarwMDeI/AOA7UhONw/W97/u9LQBVnvkz0XGNh7FbwYo7YEh9j+9v7tBw3sw06yB8EhFj/o8GbnnQRejFF7Coch6XcOE+3uywdG9vxlsj8wHGpL4Db5iOD4frvJ8Xn7yU6hnTmygdOr2ldwWeZZwfndB5Ud3pd3xsgGx7j+FadXtS1w+3xFcLz7IDl+wsQbG8V2lsgGxw21YFylmQTnSwg/OET2n2ww3Y4e2eB8ai04GUgzC44D1g/Op9t68vs+fj5f/QtHjGzg1CrptuDrdJsnv15ZaNIdKbKBU6ukxwVfPwE4uT7pfvxc3vOH9x7ZwKlV0vKC65Nu5YH7b3uNbODUKmkbwfmkm+8/F9xxl0KvkS0cX/paMKySthM88KY0PUY2OL4++ceOj0PSvIKvS5M/uRDa3iIbzP1JsZpL4Jla64Jv3jy8p8gGvkOW5lLwJbU9CG6EtpfIBgZW8wmcZHsRHNqUfHo/217eT7bgm7hIaltwWKf9wUmneohscOGBS1KDCp8Gwh6WCwquS0nqQ/Bp2aD1STZwipXUl+BkLb31yBacYiX1Jzh0q7S+XBB4dVVzCtz2e1Y4DIhNr8kGbmSaV8GzuJ4Fh6/dv1teLii4kWlegUPGEFqObOBGJqlfAfza8nKBJPWsAGFkJWkdAUTLywXSzJKNPrJa6zKyelZiBNZU+foJquqQkdUzksPbuf2BEVhLcngnpzc8kPUqgdrymmxynJRix8eho+T4Nm53f5CcnlY5PM+B70DXowq8tRzZihvY0pLXTvErh1PYtxf/HN0nORzIPvyG+0EvksN+8s+WI5u4gT0i+T58ldfW+e75O7Ss5LgfJH4yc+uS87O9pidZuLyBwXwbWXIM2+mPT1W+D2hiJHuUHPaDynHbv/ZqyI9fj7UflC7uT5VPZ3t/+p///b9NH9WTgvMNp/D6S24//5lbSJ6LXAX+ffLjuuCfrf4E17fdQl8vRw/aPigk1/erytfB5svvb32S/ZCcfGYOxw3o359/4wN+5f1m4Rf+jEclh3/Ho4+7cvxCnv5Yc0rO94dT5f37V/aNLe2xHz4iub7PVo5nGFf9f6D5spX3gkCCAAAAAElFTkSuQmCC">
+            </div>
+            <div class="heightPerson future" id="heightPersonFuture">
+              <div class="heightPersonLabel">
+                <span class="eyebrow">БУДУЩИЙ РОСТ</span>
+                <strong id="heightFutureValue">— см</strong>
+                <small id="heightFutureImperial">—</small>
+                <span class="miniPill" id="heightFutureRange">прогноз</span>
+              </div>
+              <img class="heightPersonSilhouette" alt="" aria-hidden="true" src="data:image/png;base64,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">
+            </div>
+          </div>
+          <div class="heightCompareFloor" aria-hidden="true"></div>
+        </div>
+        <div class="heightCompareFoot">
+          <span><b id="heightCompareGain">— см</b> ориентировочно останется до взрослого роста</span>
+          <span class="sourceMark">Визуальный масштаб</span>
+        </div>
+      </div>
+
+      <div class="probabilityCard">
+        <div class="probabilityHead">
+          <div class="probabilityTitle">Другие возможные результаты</div>
+          <div class="probabilitySub">оценка достижения цели<br>выше основного прогноза</div>
+        </div>
+        <div class="probabilityList" id="probabilityList"></div>
+        <div class="probNote">Проценты — визуальная нормальная аппроксимация вокруг прогноза; это не индивидуальная медицинская вероятность.</div>
+      </div>
+      <div class="disclaimer" id="note"></div>
+      <div class="sources">
+        Основа: опубликованная модель Khamis–Roche для ориентировочного взрослого роста. Дополнительно учитываются скорость роста примерно за последние 12 месяцев, текущее положение на WHO 2007 и выбранный пользователем контекст пубертата. Для текущего положения на возрастно-половой кривой используется WHO 2007 (5–19 лет). Пубертатный статус влияет только умеренно: сроки и интенсивность скачка роста действительно связаны с оставшимся потенциалом, но без костного возраста и очной оценки нельзя надёжно переводить «ранний/поздний» в конкретное число сантиметров. Это статистический ориентир, а не клиническое предсказание.
+        <br><br>
+        <span style="display:block;margin-top:8px;color:#66748f;line-height:1.5"><b>Почему не обещаем «точность до сантиметра»:</b> опубликованные исследования показывают, что даже валидированные методы прогноза имеют заметную ошибку; костный возраст может улучшать прогноз, но ручная оценка костного возраста тоже вариабельна. Поэтому приложение не подставляет выдуманный костный возраст и не превращает признаки пубертата в произвольные сантиметры.</span>
+        <br>
+        <a href="https://pubmed.ncbi.nlm.nih.gov/7936860/" target="_blank" rel="noopener">PubMed — Khamis–Roche</a> ·
+        <a href="https://pubmed.ncbi.nlm.nih.gov/9685454/" target="_blank" rel="noopener">PubMed — рост и нормальный пубертат</a> ·
+        <a href="https://www.endocrine.org/clinical-practice-guidelines/central-precocious-puberty" target="_blank" rel="noopener">Endocrine Society — пубертат</a> ·
+        <a href="https://pubmed.ncbi.nlm.nih.gov/21251310/" target="_blank" rel="noopener">PubMed — размер обуви и скачок роста</a> ·
+        <a href="https://www.healthychildren.org/English/health-issues/conditions/Glands-Growth-Disorders/Pages/Predicting-a-Childs-Adult-Height.aspx" target="_blank" rel="noopener">AAP / HealthyChildren — Adult Height</a> ·
+        <a href="https://www.cdc.gov/growthcharts/cdc-data-files.htm" target="_blank" rel="noopener">CDC — LMS Growth Data</a> ·
+        <a href="https://www.who.int/tools/growth-reference-data-for-5to19-years/indicators/height-for-age" target="_blank" rel="noopener">WHO — Height for Age</a> ·
+        <a href="https://pubmed.ncbi.nlm.nih.gov/37735232/" target="_blank" rel="noopener">Adult-height prediction models review</a> ·
+        <a href="https://pubmed.ncbi.nlm.nih.gov/28561296/" target="_blank" rel="noopener">Puberty / prediction accuracy</a>
+      </div>
+      <button class="back" id="again">← Ввести другие данные</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+(function(){
+  const screen=document.getElementById('bootScreen');
+  const bar=document.getElementById('bootBar');
+  const percent=document.getElementById('bootPercent');
+  const text=document.getElementById('bootText');
+  const start=performance.now(), duration=10000;
+  const messages=[
+    [0,'Инициализируем модель роста…'],
+    [.15,'Загружаем возрастно-половые референсы…'],
+    [.32,'Подготавливаем расчёт Khamis–Roche…'],
+    [.50,'Проверяем систему оценки…'],
+    [.68,'Синхронизируем модули анализа…'],
+    [.84,'Сопоставляем модули прогноза…'],
+    [.94,'Готовим персональный расчёт…'],
+    [1,'Готово']
+  ];
+  function frame(now){
+    const p=Math.min(1,(now-start)/duration);
+    bar.style.width=(p*100).toFixed(1)+'%';
+    percent.textContent=Math.round(p*100)+'%';
+    let msg=messages[0][1];
+    for(const m of messages) if(p>=m[0]) msg=m[1];
+    text.textContent=msg;
+    if(p<1) requestAnimationFrame(frame);
+    else setTimeout(()=>{
+      screen.classList.add('hide');
+      document.body.classList.remove('appBoot');
+      setTimeout(()=>screen.remove(),700);
+    },120);
+  }
+  requestAnimationFrame(frame);
+})();
+
+const canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');
+let W,H,stars=[];
+function resize(){W=canvas.width=innerWidth*devicePixelRatio;H=canvas.height=innerHeight*devicePixelRatio;canvas.style.width=innerWidth+'px';canvas.style.height=innerHeight+'px';stars=Array.from({length:90},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2+0.3,v:Math.random()*.25+.05,p:Math.random()*6.28}))}
+function draw(t=0){ctx.clearRect(0,0,W,H);for(const s of stars){s.y-=s.v;if(s.y<0)s.y=H;ctx.globalAlpha=.18+.2*Math.sin(t/900+s.p);ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='#9fb5ff';ctx.fill()}ctx.globalAlpha=1;requestAnimationFrame(draw)}
+addEventListener('resize',resize);resize();draw();
+
+const $=id=>document.getElementById(id);
+
+/*
+  App-style custom selectors. The native <select> remains in the DOM as the
+  source of truth for the calculation, but its mobile picker is hidden. This
+  prevents the platform's gray system sheet from replacing the app's visual
+  language and lets the menu animate smoothly on both iOS and Android.
+*/
+const customSelects=[];
+function initCustomSelects(){
+  document.querySelectorAll('.customSelect[data-select-id]').forEach(control=>{
+    const id=control.dataset.selectId;
+    const native=$(id);
+    if(!native) return;
+    const menu=document.createElement('div');
+    menu.className='customMenu';
+    menu.setAttribute('role','listbox');
+    menu.setAttribute('aria-label',native.previousElementSibling?.textContent||id);
+    Array.from(native.options).forEach((option,index)=>{
+      const item=document.createElement('div');
+      item.className='customOption'+(option.value===native.value?' selected':'');
+      item.dataset.value=option.value;
+      item.setAttribute('role','option');
+      item.setAttribute('aria-selected',option.value===native.value?'true':'false');
+      item.innerHTML=`<span>${option.textContent}</span>`;
+      item.addEventListener('click',event=>{
+        event.stopPropagation();
+        native.value=option.value;
+        native.dispatchEvent(new Event('change',{bubbles:true}));
+        updateCustomSelect(control,native,menu);
+        closeCustomSelect(control,menu);
+      });
+      menu.appendChild(item);
+    });
+    document.body.appendChild(menu);
+    const state={control,native,menu};
+    customSelects.push(state);
+    control.addEventListener('click',event=>{event.stopPropagation(); toggleCustomSelect(state)});
+    control.addEventListener('keydown',event=>{
+      if(event.key==='Enter'||event.key===' '||event.key==='ArrowDown'||event.key==='ArrowUp'){
+        event.preventDefault();
+        if(!menu.classList.contains('open')) toggleCustomSelect(state);
+        else moveCustomSelection(state,event.key==='ArrowUp'?-1:1);
+      } else if(event.key==='Escape'){
+        closeCustomSelect(control,menu);
+      }
+    });
+    updateCustomSelect(control,native,menu);
+  });
+}
+function updateCustomSelect(control,native,menu){
+  const value=menu.querySelector('.customOption.selected');
+  control.querySelector('.customSelectValue').textContent=native.options[native.selectedIndex]?.textContent||'';
+  menu.querySelectorAll('.customOption').forEach(item=>{
+    const selected=item.dataset.value===native.value;
+    item.classList.toggle('selected',selected);
+    item.setAttribute('aria-selected',selected?'true':'false');
+  });
+}
+function positionCustomMenu(state){
+  const {control,menu}=state;
+  const r=control.getBoundingClientRect();
+  const gap=8;
+  menu.style.width=Math.max(r.width,180)+'px';
+  menu.style.left=Math.max(10,Math.min(r.left,window.innerWidth-r.width-10))+'px';
+  const menuH=menu.offsetHeight;
+  const below=r.bottom+gap;
+  const above=r.top-gap-menuH;
+  if(below+6<=window.innerHeight || above<10){
+    menu.style.top=below+'px';
+    menu.classList.remove('above');
+  } else {
+    menu.style.top=above+'px';
+    menu.classList.add('above');
+  }
+}
+function toggleCustomSelect(state){
+  const isOpen=state.menu.classList.contains('open');
+  customSelects.forEach(other=>{if(other!==state) closeCustomSelect(other.control,other.menu)});
+  if(isOpen) closeCustomSelect(state.control,state.menu);
+  else {
+    state.control.classList.add('open');
+    state.control.setAttribute('aria-expanded','true');
+    state.menu.classList.add('open');
+    positionCustomMenu(state);
+  }
+}
+function closeCustomSelect(control,menu){
+  control.classList.remove('open');
+  control.setAttribute('aria-expanded','false');
+  menu.classList.remove('open');
+}
+function moveCustomSelection(state,delta){
+  const opts=Array.from(state.native.options);
+  const current=Math.max(0,state.native.selectedIndex);
+  const next=(current+delta+opts.length)%opts.length;
+  state.native.value=opts[next].value;
+  state.native.dispatchEvent(new Event('change',{bubbles:true}));
+  updateCustomSelect(state.control,state.native,state.menu);
+}
+document.addEventListener('click',()=>customSelects.forEach(s=>closeCustomSelect(s.control,s.menu)));
+window.addEventListener('resize',()=>customSelects.forEach(s=>{if(s.menu.classList.contains('open')) positionCustomMenu(s)}));
+window.addEventListener('scroll',()=>customSelects.forEach(s=>{if(s.menu.classList.contains('open')) positionCustomMenu(s)}),true);
+initCustomSelects();
+
+// Soft, pointer-positioned ripple feedback for every action button.
+document.addEventListener('click',event=>{
+  const button=event.target.closest('button');
+  if(!button || button.disabled) return;
+  const rect=button.getBoundingClientRect();
+  const size=Math.max(rect.width,rect.height)*1.45;
+  const ripple=document.createElement('span');
+  ripple.className='buttonRipple';
+  ripple.style.width=size+'px';
+  ripple.style.height=size+'px';
+  const x=(Number.isFinite(event.clientX)&&event.clientX!==0)?event.clientX:rect.left+rect.width/2;
+  const y=(Number.isFinite(event.clientY)&&event.clientY!==0)?event.clientY:rect.top+rect.height/2;
+  ripple.style.left=(x-rect.left-size/2)+'px';
+  ripple.style.top=(y-rect.top-size/2)+'px';
+  button.appendChild(ripple);
+  ripple.addEventListener('animationend',()=>ripple.remove(),{once:true});
+});
+
+function val(id){return parseFloat($(id).value)}
+function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
+
+/*
+  Growth model:
+  Primary adult-height estimate: Khamis-Roche (Pediatrics, 1994),
+  using the corrected coefficients from the 1995 erratum.
+  Inputs: age, sex, current height, current weight, and the average
+  of biological parents' heights. This is a published regression model,
+  not a hand-tuned blend of arbitrary signals.
+
+  Important limitations:
+  - Original development sample: healthy white American children from
+    the Fels Longitudinal Study; applying it to other populations is
+    an extrapolation.
+  - Bone age and pubertal stage are not available in this home model.
+  - WHO references are used for current height-for-age context,
+    not as a substitute for the adult-height regression.
+  - Shoe size and "tallest relative" are NOT converted into centimeters
+    because there is no validated general-purpose coefficient for them.
+*/
+
+const growthAnchors={
+  boy:[
+    [5,110.0,5.4],[6,116.0,5.6],[7,122.0,5.8],[8,128.0,6.0],[9,133.5,6.2],
+    [10,138.5,6.4],[11,143.5,6.6],[12,149.0,7.0],[13,156.0,7.4],[14,163.0,7.6],
+    [15,169.0,7.6],[16,173.0,7.4],[17,175.5,7.2],[18,176.2,7.1],[19,176.5,7.0]
+  ],
+  girl:[
+    [5,109.5,5.3],[6,115.5,5.5],[7,121.5,5.7],[8,127.5,5.9],[9,133.0,6.1],
+    [10,138.5,6.3],[11,144.5,6.5],[12,151.0,6.7],[13,156.0,6.8],[14,159.5,6.8],
+    [15,161.5,6.7],[16,162.2,6.6],[17,162.5,6.5],[18,162.5,6.4],[19,162.5,6.3]
+  ]
+};
+
+function interpAnchor(age,sex){
+  const a=growthAnchors[sex];
+  if(age<=a[0][0]) return a[0].slice(1);
+  if(age>=a[a.length-1][0]) return a[a.length-1].slice(1);
+  for(let i=1;i<a.length;i++){
+    if(age<=a[i][0]){
+      const [x0,m0,s0]=a[i-1], [x1,m1,s1]=a[i], t=(age-x0)/(x1-x0);
+      return [m0+(m1-m0)*t,s0+(s1-s0)*t];
+    }
+  }
+}
+
+/* Corrected Khamis-Roche coefficients, half-year ages 4.0–17.5.
+   Formula in inches:
+   adult = B0 + bH*height + bW*weight + bM*mid-parent-height.
+   Coefficients are from the corrected 1995 erratum. */
+const kr={
+  boy:[
+    [4,-10.2567,1.23812,-0.087235,0.50286],
+    [4.5,-10.719,1.15964,-0.074454,0.52887],
+    [5,-11.0213,1.10674,-0.064778,0.53919],
+    [5.5,-11.1556,1.0748,-0.05776,0.53691],
+    [6,-11.1138,1.05923,-0.052947,0.52513],
+    [6.5,-11.0221,1.05542,-0.049892,0.50692],
+    [7,-10.9984,1.05877,-0.048144,0.48538],
+    [7.5,-11.0214,1.06467,-0.047256,0.46361],
+    [8,-11.0696,1.06853,-0.046778,0.44469],
+    [8.5,-11.122,1.06572,-0.046261,0.43171],
+    [9,-11.1571,1.05166,-0.045254,0.42776],
+    [9.5,-11.1405,1.02174,-0.043311,0.43593],
+    [10,-11.038,0.97135,-0.039981,0.45932],
+    [10.5,-10.8286,0.89589,-0.034814,0.50101],
+    [11,-10.4917,0.81239,-0.02905,0.54781],
+    [11.5,-10.0065,0.74134,-0.024167,0.58409],
+    [12,-9.3522,0.68325,-0.020076,0.60927],
+    [12.5,-8.6055,0.63869,-0.016681,0.62279],
+    [13,-7.8632,0.60818,-0.013895,0.62407],
+    [13.5,-7.1348,0.59228,-0.011624,0.61253],
+    [14,-6.4299,0.59151,-0.009776,0.58762],
+    [14.5,-5.7578,0.60643,-0.008261,0.54875],
+    [15,-5.1282,0.63757,-0.006988,0.49536],
+    [15.5,-4.5092,0.68548,-0.005863,0.42687],
+    [16,-3.9292,0.75069,-0.004795,0.34271],
+    [16.5,-3.4873,0.83375,-0.003695,0.24231],
+    [17,-3.283,0.9352,-0.00247,0.1251],
+    [17.5,-3.4156,1.05558,-0.001027,-0.0095]
+  ],
+  girl:[
+    [4,-8.1325,1.24768,-0.19435,0.44774],
+    [4.5,-6.47656,1.22177,-0.18519,0.41381],
+    [5,-5.13582,1.19932,-0.1753,0.38467],
+    [5.5,-4.13791,1.1788,-0.16484,0.36039],
+    [6,-3.51039,1.15866,-0.154,0.34105],
+    [6.5,-3.14322,1.13737,-0.14294,0.32672],
+    [7,-2.87645,1.11342,-0.13184,0.31748],
+    [7.5,-2.66291,1.08525,-0.12086,0.3134],
+    [8,-2.45559,1.05135,-0.11019,0.31457],
+    [8.5,-2.20728,1.01018,-0.09999,0.32105],
+    [9,-1.87098,0.9602,-0.09044,0.33291],
+    [9.5,-1.0633,0.89989,-0.08171,0.35025],
+    [10,0.33468,0.82771,-0.07397,0.37312],
+    [10.5,1.97366,0.74213,-0.06739,0.40161],
+    [11,3.50436,0.67173,-0.06136,0.42042],
+    [11.5,4.57747,0.6415,-0.05518,0.41686],
+    [12,4.84365,0.64452,-0.04894,0.3949],
+    [12.5,4.27869,0.67386,-0.04272,0.3585],
+    [13,3.21417,0.7226,-0.03661,0.31163],
+    [13.5,1.83456,0.78383,-0.03067,0.25826],
+    [14,0.32425,0.85062,-0.025,0.20235],
+    [14.5,-1.13224,0.91605,-0.01967,0.14787],
+    [15,-2.35055,0.97319,-0.01477,0.0988],
+    [15.5,-3.10326,1.01514,-0.01037,0.05909],
+    [16,-3.17885,1.03496,-0.00655,0.03272],
+    [16.5,-2.41657,1.02573,-0.0034,0.02364],
+    [17,-0.65579,0.98054,-0.001,0.03584],
+    [17.5,2.26429,0.89246,0.00057,0.07327]
+  ]
+};
+
+function interpKR(age,sex){
+  const rows=kr[sex];
+  if(age<=4) return rows[0].slice(1);
+  if(age>=17.5) return rows[rows.length-1].slice(1);
+  const pos=(age-4)*2, i=Math.floor(pos), t=pos-i;
+  const r0=rows[i], r1=rows[i+1];
+  return r0.slice(1).map((v,j)=>v+(r1[j+1]-v)*t);
+}
+
+function normalCDF(z){ return .5*(1+erf(z/Math.SQRT2)); }
+function erf(x){
+  const sign=x<0?-1:1; x=Math.abs(x);
+  const a1=.254829592,a2=-.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=.3275911;
+  const t=1/(1+p*x);
+  return sign*(1-((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t*Math.exp(-x*x));
+}
+function zToPercentile(z){return clamp(normalCDF(z)*100,0.5,99.5)}
+
+function calculate(){
+  const father=val('father'), mother=val('mother'), height=val('height'), weight=val('weight'),
+        age=val('age'), foot=val('foot'), tallest=val('tallest'),
+        heightPrev=val('heightPrev'), sex=$('sex').value,
+        pubertyStatus=$('pubertyStatus').value;
+
+  if([father,mother,height,weight,age,foot,tallest].some(x=>!Number.isFinite(x))){
+    alert('Заполни, пожалуйста, все обязательные поля.'); return null;
+  }
+  if(age<4 || age>17.5){
+    alert('Основная модель Khamis–Roche рассчитана для возраста 4–17,5 лет.'); return null;
+  }
+  if(heightPrev && (heightPrev>=height || heightPrev<50)){
+    alert('Рост 12 месяцев назад должен быть меньше текущего роста.'); return null;
+  }
+
+  /*
+    Evidence-based prediction stack:
+    1) Published Khamis–Roche remains the anchor model.
+    2) WHO 2007 supplies age/sex-specific growth trajectory and current z-score.
+    3) The measured ~12-month velocity is used as the strongest available home
+       signal of whether a pubertal acceleration is actually occurring.
+    4) Puberty timing is treated as context, not as a fake centimetre bonus.
+
+    Important: a 3-option self-report cannot replace Tanner staging or bone age.
+    Therefore puberty affects confidence/weighting only when it agrees with the
+    observed age + velocity pattern.
+  */
+  const midRaw=(father+mother)/2;
+  const midTanner=(father + mother + (sex==='boy'?13:-13))/2;
+
+  const [B0,bH,bW,bM]=interpKR(age,sex);
+  const hIn=height/2.54, wLb=weight/0.45359237, mIn=midRaw/2.54;
+  const krIn=B0 + bH*hIn + bW*wLb + bM*mIn;
+  const krEstimate=krIn*2.54;
+
+  // WHO reference for current height position.
+  const ref=whoChartRef[sex];
+  const median=lerpRef(ref.median,clamp(age,5,19));
+  const sd=lerpRef(ref.sd,clamp(age,5,19));
+  const z=(height-median)/sd;
+  const percentile=zToPercentile(z);
+
+  // Preserve the current WHO z-score to adulthood as a secondary trajectory check.
+  const adultMedian=lerpRef(ref.median,19);
+  const adultSD=lerpRef(ref.sd,19);
+  const curveProjection=adultMedian + z*adultSD;
+  const modelGap=curveProjection-krEstimate;
+
+  // ~12-month height velocity. This is much more informative than a single shoe size.
+  let velocity=null;
+  if(Number.isFinite(heightPrev)) velocity=height-heightPrev;
+
+  // Age-specific reference velocity from WHO median curve.
+  const refVelocity=Math.max(
+    0.2,
+    lerpRef(ref.median,clamp(age+0.5,5,19)) -
+    lerpRef(ref.median,clamp(age-0.5,5,19))
+  );
+
+  /* Published pubertal-growth statistics used only as contextual signals:
+     boys: PHV ~13.9 y, ~9.5 cm/y; girls: PHV ~12.2 y, ~8.3 cm/y.
+     Pubertal velocity >6 cm/y is also used clinically as evidence of growth
+     acceleration in the 2026 Endocrine Society CPP guideline for girls.
+  */
+  const pubertyNorm = sex==='boy'
+    ? {peakAge:13.9, peakVelocity:9.5, onsetMin:9, onsetMax:14, delayedAge:14}
+    : {peakAge:12.2, peakVelocity:8.3, onsetMin:8, onsetMax:13, delayedAge:13};
+
+  let velocityRatio=null;
+  let peakVelocityRatio=null;
+  let accelerated=false;
+  let nearPeak=false;
+  let spurtEvidence=0;
+  let maturitySignal='Темп роста близок к возрастной медиане';
+
+  if(velocity!==null){
+    velocityRatio=velocity/refVelocity;
+    peakVelocityRatio=velocity/pubertyNorm.peakVelocity;
+    accelerated=velocity>=6 || velocityRatio>=1.20;
+    nearPeak=velocity>=0.78*pubertyNorm.peakVelocity &&
+             velocity<=1.25*pubertyNorm.peakVelocity;
+
+    if(velocityRatio>=1.35) maturitySignal='Рост заметно ускорен относительно возрастной медианы';
+    else if(velocityRatio<=0.65) maturitySignal='Рост заметно замедлен относительно возрастной медианы';
+    else if(accelerated) maturitySignal='Есть признаки ускорения роста, совместимые с пубертатным скачком';
+
+    // Evidence score: observed velocity carries more weight than the age label.
+    const velocityEvidence=clamp((velocityRatio-0.85)/0.75,0,1);
+    const peakEvidence=clamp(1-Math.abs(age-pubertyNorm.peakAge)/3.2,0,1);
+    const peakSizeEvidence=clamp((peakVelocityRatio-0.60)/0.55,0,1);
+    spurtEvidence=0.55*velocityEvidence + 0.25*peakEvidence + 0.20*peakSizeEvidence;
+  }
+
+  // How well does the selected puberty context agree with observed development?
+  let pubertyConsistency=0.5;
+  if(velocity!==null){
+    if(pubertyStatus==='early'){
+      pubertyConsistency=(age<=pubertyNorm.peakAge ? 0.72 : 0.38) + (accelerated ? 0.18 : -0.10);
+    }else if(pubertyStatus==='late'){
+      pubertyConsistency=(age>=pubertyNorm.peakAge ? 0.72 : 0.38) + (accelerated ? 0.18 : -0.10);
+    }else if(pubertyStatus==='not_started'){
+      pubertyConsistency=(age<pubertyNorm.onsetMax ? 0.66 : 0.30) + (velocity<refVelocity*0.95 ? 0.18 : -0.16);
+    }
+  }
+  pubertyConsistency=clamp(pubertyConsistency,0.05,0.95);
+
+  /*
+    The key improvement is not a larger arbitrary puberty correction. It is
+    better evidence weighting: when age, measured velocity and the selected
+    puberty timing point in the same direction, the trajectory check receives
+    more weight; when they conflict, it receives less weight and the uncertainty
+    grows. This follows the clinical importance of serial growth and pubertal
+    progression without pretending a home selector is a Tanner score.
+  */
+  let trajectoryWeight=0.12;
+  if(Math.abs(modelGap)>=4) trajectoryWeight+=0.05;
+  if(Math.abs(modelGap)>=7) trajectoryWeight+=0.04;
+
+  if(velocity!==null){
+    trajectoryWeight+=0.06;
+    if(accelerated) trajectoryWeight+=0.04;
+    if(nearPeak) trajectoryWeight+=0.02;
+    trajectoryWeight+=0.06*(pubertyConsistency-0.5);
+  }
+
+  if(pubertyStatus==='early' || pubertyStatus==='late') trajectoryWeight+=0.02;
+  trajectoryWeight=clamp(trajectoryWeight,0.10,0.32);
+
+  // If the self-reported puberty timing and measured trajectory disagree strongly,
+  // do not force the puberty label into the prediction.
+  const pubertyVelocityConflict = velocity!==null && pubertyConsistency<0.30;
+  if(pubertyVelocityConflict) trajectoryWeight=Math.max(0.10,trajectoryWeight-0.07);
+
+  /*
+    Maturity-aware adult trajectory:
+    A delayed pattern can show catch-up toward a genetically compatible height,
+    while early/rapid maturation can shorten the remaining growth window. Because
+    the magnitude is not reliably identifiable without bone age/Tanner stage, the
+    adjustment is deliberately capped and only acts on the secondary trajectory
+    estimate, not on Khamis–Roche itself.
+  */
+  const geneticAnchor=midTanner;
+  let maturityProjection=curveProjection;
+  if(pubertyStatus==='late' && age>=pubertyNorm.peakAge && (accelerated || velocityRatio===null || velocityRatio<1.0)){
+    const catchupTowardGenetics=clamp((geneticAnchor-curveProjection)*0.10,-2.0,2.0);
+    maturityProjection=curveProjection+catchupTowardGenetics;
+  }else if(pubertyStatus==='early' && age<=pubertyNorm.peakAge && accelerated){
+    const earlyTempoShift=clamp((curveProjection-geneticAnchor)*0.06,-1.2,1.2);
+    maturityProjection=curveProjection-earlyTempoShift;
+  }else if(pubertyStatus==='not_started' && age>=pubertyNorm.delayedAge && velocity!==null && velocity<refVelocity){
+    const delayedShift=clamp((geneticAnchor-curveProjection)*0.06,-1.0,1.0);
+    maturityProjection=curveProjection+delayedShift;
+  }
+
+  const maturityGap=maturityProjection-curveProjection;
+  const trajectoryProjection=curveProjection+maturityGap;
+  const estimate=krEstimate*(1-trajectoryWeight)+trajectoryProjection*trajectoryWeight;
+
+  /* Uncertainty is widened for missing skeletal maturity information and for
+     conflicting signals. We do not present a fake clinical confidence level. */
+  let error90=sex==='boy'?5.34:4.25;
+  if(velocity!==null) error90-=0.35; // serial growth adds real individual information
+  if(accelerated) error90+=0.15;
+  if(nearPeak) error90+=0.10; // peak timing is highly variable between individuals
+  if(pubertyStatus==='early' || pubertyStatus==='late') error90+=0.15;
+  if(Math.abs(modelGap)>=4) error90+=0.45;
+  if(pubertyVelocityConflict) error90+=0.65;
+  if(pubertyStatus==='not_started' && age>=pubertyNorm.delayedAge) error90+=0.55;
+  error90=clamp(error90,3.8,7.5);
+
+  const low=estimate-error90, high=estimate+error90;
+  const dataQuality=(velocity!==null && !pubertyVelocityConflict && Math.abs(modelGap)<4)
+    ? 'Есть серийное измерение за ~12 месяцев — скорость роста и признаки ускорения учтены.'
+    : 'Ориентировочный расчёт — без костного возраста и точной стадии пубертата индивидуальная точность ограничена.';
+
+  const trajectoryFlag=velocity===null
+    ? 'Скорость роста не задана.'
+    : `${maturitySignal}.`;
+
+  return {
+    father,mother,height,weight,age,foot,tallest,heightPrev,sex,
+    pubertyStatus,
+    fatherAdj:father,motherAdj:mother,midRaw,mid:midTanner,
+    estimate,krEstimate,low,high,percentile,z,median,sd,
+    curveProjection,maturityProjection,trajectoryProjection,adultMedian,adultSD,modelGap,maturityGap,
+    velocity,velocity2:null,acceleration:null,refVelocity,velocityRatio,peakVelocityRatio,
+    pubertyPeakAge:pubertyNorm.peakAge,pubertyPeakVelocity:pubertyNorm.peakVelocity,
+    accelerated,nearPeak,spurtEvidence,pubertyConsistency,
+    trajectoryFlag,maturitySignal,trajectoryWeight,
+    error90,dataQuality,krModel:true,pubertyVelocityConflict
+  };
+}
+
+$('go').onclick=async()=>{
+  const d=calculate(); if(!d)return;
+  if(!await window.__spend())return;
+  $('formView').style.display='none'; $('result').classList.remove('show'); $('loader').classList.add('show');
+  $('bar').style.width='0%';
+  const steps=[$('s1'),$('s2'),$('s3')];
+  steps.forEach(x=>x.classList.remove('active'));
+  const start=performance.now(), duration=3000;
+  const phases=[
+    [0,'Сопоставляем рост родителей','Сверяем семейную цель роста'],
+    [.34,'Проверяем положение на кривой','Сравниваем текущий рост с нормой возраста'],
+    [.68,'Калибруем прогноз','Сверяем модель, семейный ориентир и динамику роста'],
+    [1,'Готово','Формируем осторожный диапазон']
+  ];
+  function tick(now){
+    const p=clamp((now-start)/duration,0,1);
+    $('bar').style.width=(p*100)+'%';
+    let phase=phases[0];
+    for(const x of phases) if(p>=x[0]) phase=x;
+    $('loaderTitle').textContent=phase[1];
+    $('loaderText').textContent=phase[2];
+    steps.forEach((x,i)=>x.classList.toggle('active',i<=Math.min(2,Math.floor(p*3))));
+    if(p<1) requestAnimationFrame(tick);
+    else setTimeout(()=>showResult(d),180);
+  }
+  requestAnimationFrame(tick);
+};
+
+
+function normalCDF2(z){
+  const sign=z<0?-1:1; z=Math.abs(z);
+  const t=1/(1+0.2316419*z);
+  const d=0.3989423*Math.exp(-z*z/2);
+  const poly=((((1.330274429*t-1.821255978)*t+1.781477937)*t-0.356563782)*t+0.319381530)*t;
+  return sign===1 ? 1-d*poly : d*poly;
+}
+
+/*
+  The panel is intentionally presented as a set of possible adult-height
+  scenarios, not as a claim of exact individual probabilities.
+  We include values above the main estimate so the user can see how the
+  chance decreases as the target gets farther above the model estimate.
+*/
+function renderProbabilityDistribution(d){
+  const list=$('probabilityList');
+  const sigma=Math.max(2.2, Math.min(4.8, d.error90/1.645));
+  const center=Math.round(d.estimate);
+  const targets=[center,center+3,center+6,center+9,center+12,center+15];
+
+  const rows=targets.map((h,i)=>{
+    const z=(h-d.estimate)/sigma;
+    let p=100*(1-normalCDF2(z));
+    if(i===0) p=Math.max(50,p);
+    p=clamp(p,1,99);
+    return {h,p};
+  });
+
+  // Keep the visual probabilities monotonic and readable.
+  for(let i=1;i<rows.length;i++){
+    rows[i].p=Math.min(rows[i].p, rows[i-1].p-1);
+    rows[i].p=Math.max(1, rows[i].p);
+  }
+
+  list.innerHTML=rows.map((r,i)=>`
+    <div class="probRow">
+      <div class="probHeight">${r.h} см</div>
+      <div class="probTrack">
+        <div class="probFill" style="width:${Math.max(3,Math.min(100,r.p))}%"></div>
+      </div>
+      <div class="probPct">${Math.round(r.p)}%</div>
+    </div>
+  `).join('');
+}
+
+function easeOutCubic(t){return 1-Math.pow(1-t,3);}
+function animateHeightCounter(target,d){
+  const el=$('prediction'), caption=$('countCaption'), gain=$('futureGain'), gainText=$('gainText');
+  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const finalValue=Math.max(1,Math.round(target));
+  const duration=reduced?40:1850;
+  const started=performance.now();
+  el.classList.remove('counted'); el.classList.add('counting'); gain.classList.remove('show');
+  function frame(now){
+    const p=Math.min(1,(now-started)/duration), eased=easeOutCubic(p);
+    el.textContent=Math.round(1+(finalValue-1)*eased)+' см';
+    caption.textContent=p<.18?'запускаем расчёт…':p<.48?'сверяем траекторию роста…':p<.78?'сходимся к прогнозу…':'финализируем прогноз…';
+    if(p<1){requestAnimationFrame(frame);return;}
+    el.textContent=finalValue+' см';
+    el.classList.remove('counting'); el.classList.add('counted');
+    caption.textContent='ориентировочный взрослый рост';
+    gainText.textContent='Потенциал: +'+Math.max(0,finalValue-Math.round(d.height))+' см от текущего роста';
+    gain.classList.add('show');
+  }
+  requestAnimationFrame(frame);
+}
+
+
+/* WHO 2007 height-for-age visualization.
+   Values below are a compact yearly representation of the published WHO
+   5–19-year reference; the chart interpolates between yearly points for a
+   smooth visual trajectory. */
+const whoChartRef={
+  boy:{
+    median:[[5,110.3],[6,116.0],[7,121.7],[8,127.3],[9,132.6],[10,138.2],[11,143.1],[12,149.1],[13,156.0],[14,163.2],[15,169.0],[16,173.0],[17,175.4],[18,176.1],[19,176.2]],
+    sd:[[5,4.6],[6,4.9],[7,5.2],[8,5.4],[9,5.6],[10,6.2],[11,6.4],[12,7.3],[13,7.5],[14,7.7],[15,7.8],[16,7.7],[17,7.5],[18,7.5],[19,7.5]]
+  },
+  girl:{
+    median:[[5,109.6],[6,115.4],[7,121.1],[8,127.2],[9,132.5],[10,138.2],[11,144.0],[12,151.2],[13,156.4],[14,159.8],[15,161.7],[16,162.5],[17,162.5],[18,162.5],[19,162.5]],
+    sd:[[5,4.8],[6,5.0],[7,5.2],[8,5.3],[9,5.5],[10,6.3],[11,6.5],[12,6.9],[13,6.9],[14,6.8],[15,6.8],[16,6.7],[17,6.6],[18,6.5],[19,6.4]]
+  }
+};
+
+function lerpRef(arr,x){
+  if(x<=arr[0][0]) return arr[0][1];
+  if(x>=arr[arr.length-1][0]) return arr[arr.length-1][1];
+  for(let i=1;i<arr.length;i++){
+    if(x<=arr[i][0]){
+      const [x0,y0]=arr[i-1],[x1,y1]=arr[i],t=(x-x0)/(x1-x0);
+      return y0+(y1-y0)*t;
+    }
+  }
+  return arr[arr.length-1][1];
+}
+
+function drawGrowthChart(d, selectedAge){
+  const canvas=$('growthChart'); if(!canvas) return;
+  const wrap=$('growthChartWrap');
+  const box=canvas.getBoundingClientRect(), ratio=Math.max(1,window.devicePixelRatio||1);
+  const w=Math.max(320,box.width), h=Math.max(260,box.height);
+  canvas.width=Math.round(w*ratio); canvas.height=Math.round(h*ratio);
+  const c=canvas.getContext('2d'); c.setTransform(ratio,0,0,ratio,0,0);
+  c.clearRect(0,0,w,h);
+
+  const ref=whoChartRef[d.sex]||whoChartRef.boy;
+  const pad={l:45,r:16,t:24,b:42}, pw=w-pad.l-pad.r, ph=h-pad.t-pad.b;
+  const xmin=5,xmax=19,ymin=90,ymax=200;
+  const X=age=>pad.l+(age-xmin)/(xmax-xmin)*pw;
+  const Y=cm=>pad.t+(ymax-cm)/(ymax-ymin)*ph;
+  const currentAge=clamp(d.age,xmin,xmax);
+  const focusAge=clamp(Number.isFinite(selectedAge)?selectedAge:currentAge,xmin,xmax);
+  const medianNow=lerpRef(ref.median,currentAge), sdNow=lerpRef(ref.sd,currentAge);
+  const zNow=(d.height-medianNow)/sdNow;
+
+  const futureCurve=(age)=>{
+    if(age<=currentAge) return lerpRef(ref.median,age)+zNow*lerpRef(ref.sd,age);
+    const t=clamp((age-currentAge)/(19-currentAge||1),0,1);
+    const eased=t*t*(3-2*t);
+    const target=d.estimate;
+    return d.height+(target-d.height)*eased;
+  };
+
+  const bg=c.createLinearGradient(0,0,0,h);
+  bg.addColorStop(0,'rgba(113,145,255,.035)'); bg.addColorStop(1,'rgba(84,222,190,.018)');
+  c.fillStyle=bg;c.fillRect(0,0,w,h);
+
+  c.font='10px Inter,system-ui,sans-serif'; c.textAlign='right'; c.textBaseline='middle';
+  for(let cm=100;cm<=200;cm+=10){
+    const yy=Y(cm);
+    c.strokeStyle='rgba(133,154,205,.09)';c.lineWidth=1;
+    c.beginPath();c.moveTo(pad.l,yy);c.lineTo(w-pad.r,yy);c.stroke();
+    c.fillStyle='#5c6b87';c.fillText(cm, pad.l-9, yy);
+  }
+  c.textAlign='center';c.textBaseline='top';
+  for(let age=5;age<=19;age+=2){
+    const xx=X(age);
+    c.strokeStyle='rgba(133,154,205,.055)';
+    c.beginPath();c.moveTo(xx,pad.t);c.lineTo(xx,h-pad.b);c.stroke();
+    c.fillStyle='#5c6b87';c.fillText(age,xx,h-pad.b+10);
+  }
+  c.fillStyle='#6a7893';c.font='9px Inter,system-ui,sans-serif';c.fillText('Возраст, лет',pad.l+pw/2,h-13);
+
+  function path(kind){
+    c.beginPath();
+    for(let i=0;i<=140;i++){
+      const age=xmin+(xmax-xmin)*i/140;
+      const m=lerpRef(ref.median,age), s=lerpRef(ref.sd,age);
+      let cm=m;
+      if(kind==='upper') cm=m+s;
+      if(kind==='lower') cm=m-s;
+      const xx=X(age),yy=Y(cm);
+      i?c.lineTo(xx,yy):c.moveTo(xx,yy);
+    }
+  }
+
+  c.beginPath();
+  for(let i=0;i<=140;i++){const age=xmin+(xmax-xmin)*i/140;const m=lerpRef(ref.median,age),s=lerpRef(ref.sd,age);const xx=X(age),yy=Y(m+s);i?c.lineTo(xx,yy):c.moveTo(xx,yy);}
+  for(let i=140;i>=0;i--){const age=xmin+(xmax-xmin)*i/140;const m=lerpRef(ref.median,age),s=lerpRef(ref.sd,age);c.lineTo(X(age),Y(m-s));}
+  c.closePath();c.fillStyle='rgba(105,139,255,.055)';c.fill();
+
+  path('lower');c.setLineDash([4,5]);c.strokeStyle='rgba(110,130,169,.52)';c.lineWidth=1;c.stroke();
+  path('upper');c.stroke();
+  c.setLineDash([]);path('median');
+  const grad=c.createLinearGradient(pad.l,0,w-pad.r,0);
+  grad.addColorStop(0,'#7ea7ff');grad.addColorStop(.52,'#a994ff');grad.addColorStop(1,'#65dec1');
+  c.strokeStyle=grad;c.lineWidth=2.6;c.shadowColor='rgba(126,160,255,.28)';c.shadowBlur=10;c.stroke();c.shadowBlur=0;
+
+  // User trajectory: a smooth visual guide that lets the finger scrub through age.
+  c.beginPath();
+  for(let i=0;i<=140;i++){
+    const age=xmin+(xmax-xmin)*i/140, xx=X(age), yy=Y(futureCurve(age));
+    i?c.lineTo(xx,yy):c.moveTo(xx,yy);
+  }
+  c.strokeStyle='rgba(111,225,201,.38)';c.lineWidth=1.5;c.setLineDash([2,5]);c.stroke();c.setLineDash([]);
+
+  const ax=X(focusAge), focusHeight=futureCurve(focusAge), ay=Y(focusHeight);
+  c.strokeStyle='rgba(112,223,195,.26)';c.lineWidth=1;c.setLineDash([3,5]);
+  c.beginPath();c.moveTo(ax,pad.t);c.lineTo(ax,h-pad.b);c.stroke();c.setLineDash([]);
+  c.strokeStyle='rgba(112,223,195,.12)';
+  c.beginPath();c.moveTo(pad.l,ay);c.lineTo(w-pad.r,ay);c.stroke();
+
+  c.beginPath();c.arc(ax,ay,13,0,Math.PI*2);c.fillStyle='rgba(104,225,194,.08)';c.fill();
+  c.beginPath();c.arc(ax,ay,8,0,Math.PI*2);c.fillStyle='rgba(104,225,194,.12)';c.fill();
+  c.beginPath();c.arc(ax,ay,5.5,0,Math.PI*2);c.fillStyle='#f5fbff';c.fill();
+  c.beginPath();c.arc(ax,ay,3.2,0,Math.PI*2);c.fillStyle='#63ddbd';c.fill();
+
+  const label=`${focusHeight.toFixed(1)} см · ${focusAge.toFixed(1)} лет`;
+  c.font='700 10px Inter,system-ui,sans-serif'; const tw=c.measureText(label).width+18;
+  const lx=Math.min(Math.max(ax-tw/2,pad.l),w-pad.r-tw), ly=Math.max(pad.t+4,ay-34);
+  c.fillStyle='rgba(12,20,37,.95)';c.strokeStyle='rgba(105,223,194,.28)';
+  c.beginPath();c.roundRect(lx,ly,tw,23,8);c.fill();c.stroke();
+  c.fillStyle='#cfeee7';c.textAlign='center';c.textBaseline='middle';c.fillText(label,lx+tw/2,ly+11.5);
+
+  const median=lerpRef(ref.median,focusAge), sd=lerpRef(ref.sd,focusAge);
+  const z=(focusHeight-median)/sd;
+  const pct=Math.round((.5*(1+erf(z/Math.SQRT2)))*100);
+  const pos=z>=0?`примерно на ${pct}-м перцентиле`:`примерно ниже медианы, z ≈ ${z.toFixed(1)}`;
+  $('growthChartPosition').textContent=focusAge===currentAge
+    ? pos
+    : `${focusAge.toFixed(1)} лет · ${Math.round(focusHeight)} см · ${pos}`;
+  if(wrap) wrap.classList.toggle('is-dragging', window.__growthChartDragging===true);
+}
+
+let growthChartTargetAge=null;
+let growthChartDisplayAge=null;
+let growthChartAnim=null;
+
+function ageFromPointer(clientX){
+  const wrap=$('growthChartWrap');
+  if(!wrap) return null;
+  const r=wrap.getBoundingClientRect();
+  const left=r.left+45;
+  const right=r.right-16;
+  const t=clamp((clientX-left)/Math.max(1,right-left),0,1);
+  return 5+t*14;
+}
+
+function animateGrowthChartAge(){
+  if(growthChartTargetAge===null || !window.__growthData) return;
+  if(growthChartDisplayAge===null) growthChartDisplayAge=clamp(window.__growthData.age,5,19);
+  const diff=growthChartTargetAge-growthChartDisplayAge;
+  growthChartDisplayAge += diff*0.18;
+  if(Math.abs(diff)<0.015){ growthChartDisplayAge=growthChartTargetAge; growthChartAnim=null; }
+  drawGrowthChart(window.__growthData,growthChartDisplayAge);
+  if(growthChartAnim!==null) growthChartAnim=requestAnimationFrame(animateGrowthChartAge);
+}
+
+function setGrowthChartAge(age, followPointer=false){
+  if(!window.__growthData) return;
+  const next=clamp(age,5,19);
+  growthChartTargetAge=next;
+  if(followPointer){
+    // While the finger is down, the marker must follow it 1:1 rather than
+    // chasing a target with a slow easing loop. This prevents the "stops"
+    // feeling and keeps the visual response locked to the finger speed.
+    growthChartDisplayAge=next;
+    if(growthChartAnim!==null){cancelAnimationFrame(growthChartAnim);growthChartAnim=null;}
+    drawGrowthChart(window.__growthData,growthChartDisplayAge);
+    return;
+  }
+  if(growthChartAnim===null) growthChartAnim=requestAnimationFrame(animateGrowthChartAge);
+}
+
+(function initGrowthChartTouch(){
+  const wrap=$('growthChartWrap');
+  if(!wrap) return;
+  let activePointer=null;
+  let pendingAge=null;
+  let dragFrame=null;
+
+  const flushPointer=()=>{
+    dragFrame=null;
+    if(activePointer===null || pendingAge===null || !window.__growthData) return;
+    setGrowthChartAge(pendingAge,true);
+    pendingAge=null;
+  };
+
+  const queuePointerAge=age=>{
+    if(age===null) return;
+    pendingAge=age;
+    if(dragFrame===null) dragFrame=requestAnimationFrame(flushPointer);
+  };
+
+  wrap.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    activePointer=e.pointerId;
+    window.__growthChartDragging=true;
+    try{wrap.setPointerCapture(e.pointerId);}catch(_){ }
+    queuePointerAge(ageFromPointer(e.clientX));
+    e.preventDefault();
+  },{passive:false});
+
+  wrap.addEventListener('pointermove',e=>{
+    if(activePointer!==e.pointerId) return;
+    queuePointerAge(ageFromPointer(e.clientX));
+    e.preventDefault();
+  },{passive:false});
+
+  const end=e=>{
+    if(activePointer!==e.pointerId) return;
+    // Flush the final finger position before releasing the drag state.
+    if(pendingAge!==null) setGrowthChartAge(pendingAge,true);
+    pendingAge=null;
+    if(dragFrame!==null){cancelAnimationFrame(dragFrame);dragFrame=null;}
+    activePointer=null;
+    window.__growthChartDragging=false;
+    try{wrap.releasePointerCapture(e.pointerId);}catch(_){ }
+  };
+
+  wrap.addEventListener('pointerup',end);
+  wrap.addEventListener('pointercancel',end);
+  wrap.addEventListener('lostpointercapture',()=>{
+    if(dragFrame!==null){cancelAnimationFrame(dragFrame);dragFrame=null;}
+    pendingAge=null;
+    activePointer=null;
+    window.__growthChartDragging=false;
+  });
+})();
+
+window.addEventListener('resize',()=>{ if($('result')?.classList.contains('show') && window.__growthData){ drawGrowthChart(window.__growthData, growthChartDisplayAge===null ? window.__growthData.age : growthChartDisplayAge); renderHeightComparison(window.__growthData); } });
+
+
+/* Height tier selector. The cut-points use the WHO 2007 19-year height reference
+   as a standardized anchor: <1st, 1–5th, 5–15th, 15–50th, 50–85th,
+   85–95th, 95–99th, and >=99th percentile. They are sex-specific. */
+/*
+  Height-tier reference. Primary source: WHO 2007 height-for-age at 19:0 years.
+  The seven cut-points are the exact published 1st, 5th, 15th, 50th,
+  85th, 95th and 99th percentiles, rounded only to the tenth in the UI.
+  CDC 2000 stature-for-age is used as a secondary cross-check in the
+  explanatory text, not mixed into the cut-points, because WHO and CDC are
+  different reference populations and should not be averaged into a fake
+  "universal" curve.
+*/
+const heightTierReference={
+  boy:{thresholds:[159.6,164.5,169.0,176.5,184.1,188.5,193.5], percentiles:[1,5,15,50,85,95,99]},
+  girl:{thresholds:[147.9,152.4,156.4,163.2,169.9,175.5,178.4], percentiles:[1,5,15,50,85,95,99]}
+};
+const heightTierNames=['Очень низкий','Низкий','Ниже среднего','Средний','Выше среднего','Высокий','Очень высокий','Гигант'];
+function getHeightTier(height,sex){
+  const ref=heightTierReference[sex]||heightTierReference.boy;
+  const t=ref.thresholds;
+  let index=0; while(index<t.length && height>=t[index]) index++;
+  return {index,name:heightTierNames[index],thresholds:t,percentiles:ref.percentiles};
+}
+function formatTierRanges(sex){
+  const t=(heightTierReference[sex]||heightTierReference.boy).thresholds;
+  const ranges=[
+    `< ${t[0].toFixed(1)} см`,
+    `${t[0].toFixed(1)}–${(t[1]-0.1).toFixed(1)} см`,
+    `${t[1].toFixed(1)}–${(t[2]-0.1).toFixed(1)} см`,
+    `${t[2].toFixed(1)}–${(t[3]-0.1).toFixed(1)} см`,
+    `${t[3].toFixed(1)}–${(t[4]-0.1).toFixed(1)} см`,
+    `${t[4].toFixed(1)}–${(t[5]-0.1).toFixed(1)} см`,
+    `${t[5].toFixed(1)}–${(t[6]-0.1).toFixed(1)} см`,
+    `≥ ${t[6].toFixed(1)} см`
+  ];
+  return ranges;
+}
+function getTierBorderNote(d,target){
+  const ref=heightTierReference[d.sex]||heightTierReference.boy;
+  const t=ref.thresholds;
+  const low=Number(d.low), high=Number(d.high);
+  const crossed=[];
+  for(let i=0;i<t.length;i++) if(low<t[i] && high>=t[i]) crossed.push(i);
+  if(!crossed.length) return '';
+  const names=crossed.map(i=>heightTierNames[i]).join(' / ');
+  return `Диапазон прогноза затрагивает соседнюю границу: ${names}.`;
+}
+function animateHeightTier(d){
+  const rows=[...document.querySelectorAll('.tierRow')], arrow=$('tierArrow'), rail=$('tierRail'), text=$('tierResultText');
+  if(!rows.length||!rail||!arrow)return;
+  const ranges=formatTierRanges(d.sex), target=getHeightTier(d.estimate,d.sex).index;
+  rows.forEach((r,i)=>{r.classList.remove('active','selected'); r.querySelector('.tierRange').textContent=ranges[i];});
+  text.textContent='Определяем категорию…'; arrow.classList.add('show');
+  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){
+    rows[target].classList.add('active','selected');
+    arrow.style.top=rows[target].offsetTop+'px';
+    const border=getTierBorderNote(d,target);
+    text.innerHTML=`Твой результат: <strong>${heightTierNames[target]}</strong>${border?`<br><small class="tierBoundaryNote">${border}</small>`:''}`;
+    return;
+  }
+  // Fast at first, then progressively slower, like a physical selector wheel.
+  const sequence=[];
+  const laps=target===0?2:2;
+  for(let l=0;l<laps;l++) for(let i=0;i<rows.length;i++) sequence.push(i);
+  // Finish by sweeping to the exact target from above so the final stop is unmistakable.
+  for(let i=0;i<=target;i++) sequence.push(i);
+  let k=0;
+  const start=performance.now(), total=2600;
+  function step(){
+    const progress=k/Math.max(1,sequence.length-1);
+    const delay=38 + Math.pow(progress,2.6)*230;
+    const idx=sequence[k];
+    rows.forEach(r=>r.classList.remove('active'));
+    rows[idx].classList.add('active');
+    arrow.style.top=rows[idx].offsetTop+'px';
+    if(k<sequence.length-1){
+      k++;
+      setTimeout(step,delay);
+    }else{
+      rows.forEach(r=>r.classList.remove('active','selected'));
+      rows[target].classList.add('active','selected');
+      arrow.style.top=rows[target].offsetTop+'px';
+      const border=getTierBorderNote(d,target);
+      text.innerHTML=`Твой результат: <strong>${heightTierNames[target]}</strong>${border?`<br><small class="tierBoundaryNote">${border}</small>`:''}`;
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+
+function cmToFtIn(cm){
+  const totalIn=cm/2.54, ft=Math.floor(totalIn/12), inch=totalIn-ft*12;
+  return `${ft}' ${inch.toFixed(1)}"`;
+}
+function renderHeightComparison(d){
+  const current=Number(d.height), future=Math.max(current,Number(d.estimate));
+  if(!Number.isFinite(current)||!Number.isFinite(future)) return;
+  const maxScale=Math.max(190,Math.ceil(Math.max(current,future)/10)*10);
+  const stage=$('heightCompareStage');
+  if(!stage) return;
+  const floorBottom=34;
+  const peopleTop=window.matchMedia('(max-width:520px)').matches ? 70 : 64;
+  const usable=Math.max(180, stage.clientHeight-floorBottom-peopleTop);
+  const currentPx=usable*(current/maxScale);
+  const futurePx=usable*(future/maxScale);
+  const currentEl=$('heightPersonCurrent'), futureEl=$('heightPersonFuture');
+  currentEl.style.setProperty('--person-height',`${Math.max(110,currentPx)}px`);
+  futureEl.style.setProperty('--person-height',`${Math.max(110,futurePx)}px`);
+
+  $('heightCurrentValue').textContent=`${current.toFixed(1)} см`;
+  $('heightFutureValue').textContent=`${future.toFixed(1)} см`;
+  $('heightCurrentImperial').textContent=cmToFtIn(current);
+  $('heightFutureImperial').textContent=cmToFtIn(future);
+  const gain=Math.max(0,future-current);
+  $('heightCompareDelta').textContent=`+${gain.toFixed(1)} см`;
+  $('heightCompareGain').textContent=`+${gain.toFixed(1)} см`;
+  $('heightFutureRange').textContent=`диапазон ${Math.round(d.low)}–${Math.round(d.high)} см`;
+
+  const floorY=stage.clientHeight-floorBottom;
+  const currentHeadY=floorY-currentPx;
+  const futureHeadY=floorY-futurePx;
+  const guideCurrent=$('heightHeadGuideCurrent'), guideFuture=$('heightHeadGuideFuture');
+  if(guideCurrent) guideCurrent.style.top=`${Math.max(peopleTop,currentHeadY)}px`;
+  if(guideFuture) guideFuture.style.top=`${Math.max(peopleTop,futureHeadY)}px`;
+
+  const measure=$('heightCompareMeasure');
+  const measureText=$('heightCompareMeasureText');
+  if(measure && measureText){
+    const diff=Math.abs(currentHeadY-futureHeadY);
+    const top=Math.min(currentHeadY,futureHeadY);
+    measure.style.left='50%';
+    measure.style.top=`${Math.max(peopleTop,top)}px`;
+    measure.style.height=`${Math.max(12,diff)}px`;
+    measure.style.opacity=gain>=2 ? '1' : '0';
+    measureText.textContent=`+${gain.toFixed(1)} см`;
+  }
+}
+
+function showResult(d){
+  $('loader').classList.remove('show'); $('result').classList.add('show');
+  $('prediction').textContent='1 см'; $('countCaption').textContent='запускаем расчёт…'; $('futureGain').classList.remove('show');
+  window.__growthData=d;
+  growthChartTargetAge=clamp(d.age,5,19);
+  growthChartDisplayAge=growthChartTargetAge;
+  $('range').textContent=`Ориентировочный диапазон: ${Math.round(d.low)}–${Math.round(d.high)} см`;
+  $('modelLabel').textContent=`Khamis–Roche + траектория роста + контекст пубертата · ориентировочная 90% зона: ±${d.error90.toFixed(1)} см`;
+  $('mid').textContent=Math.round(d.mid)+' см';
+  $('current').textContent=Math.round(d.height)+' см';
+  $('remaining').textContent=Math.max(0,Math.round(d.estimate-d.height))+' см';
+  $('percentile').textContent=Math.round(d.percentile)+'%';
+  renderProbabilityDistribution(d);
+  requestAnimationFrame(()=>{ drawGrowthChart(d); renderHeightComparison(d); });
+
+  const pos=clamp((d.estimate-140)/70,0,1)*100;
+  $('marker').style.transition='none'; $('marker').style.left='0%';
+  requestAnimationFrame(()=>setTimeout(()=>{
+    $('marker').style.transition='left 1.7s cubic-bezier(.2,.85,.25,1)';
+    $('marker').style.left=pos+'%';
+  },120));
+
+  const velocityText=d.velocity===null
+    ? 'Рост за предыдущий год не указан — динамику оценить нельзя.'
+    : `За последние ~12 месяцев: <b>${d.velocity.toFixed(1)} см/год</b>. ${d.trajectoryFlag}`;
+  const spurtText=d.velocity===null
+    ? 'Признаки скачка по скорости роста оценить нельзя без измерения год назад.'
+    : (d.accelerated
+      ? `Скорость ${d.velocity.toFixed(1)} см/год указывает на ускорение; это совместимо с пубертатным скачком. Пик роста в исследованиях в среднем около ${d.pubertyPeakAge.toFixed(1)} года и ${d.pubertyPeakVelocity.toFixed(1)} см/год, но индивидуальные сроки сильно различаются.`
+      : `Скорость ${d.velocity.toFixed(1)} см/год не выглядит как выраженный пубертатный пик по сравнению с опубликованными средними значениями.`);
+  const crossText=`Проверка траектории WHO даёт около <b>${Math.round(d.trajectoryProjection)} см</b>; исходная Khamis–Roche — <b>${Math.round(d.krEstimate)} см</b>. Дополнительный вес траектории: ${Math.round(d.trajectoryWeight*100)}%. Это не отдельная клинически валидированная формула, а осторожная проверка согласованности.`;
+  const pubertyText={
+    late:'Выбран вариант «Поздний»: пубертат относительно сверстников ожидается позже.',
+    not_started:'Выбран вариант «Не начался»: явного начала пубертата пока не отмечается.',
+    early:'Выбран вариант «Ранний»: пубертат относительно сверстников ожидается раньше.'
+  }[d.pubertyStatus]||'Пубертатный статус не задан.';
+
+  $('note').innerHTML=`<b>Как улучшен прогноз:</b> основа остаётся опубликованной моделью Khamis–Roche. Теперь динамика роста анализируется не просто как «быстро/медленно», а вместе с возрастом, ожидаемым временем пикового роста и выбранным контекстом пубертата. ${velocityText}<br><br><b>Признаки скачка:</b> ${spurtText}<br><br><b>Пубертат:</b> ${pubertyText} Ранний пубертат обычно сдвигает скачок раньше, а при истинно позднем, непатологическом пубертате скачок может происходить позже с последующим догоняющим ростом. Но сроки пубертата сами по себе не дают надёжного числа «оставшихся сантиметров», поэтому приложение не добавляет фиксированные сантиметры за выбор варианта. ${d.dataQuality}.<br><br><b>Проверка траектории:</b> ${crossText}<br><br><b>Таблица уровней:</b> границы тир-листа взяты из WHO 2007 для 19-летнего возраста и разделяют распределение взрослого роста по 1/5/15/50/85/95/99-м перцентилям. CDC 2000 содержит отдельную референсную кривую для детей и подростков 2–20 лет; она используется как независимый ориентир, но не смешивается с WHO в одну искусственную таблицу.<br><br><b>Важно:</b> размер ноги и рост самого высокого родственника не превращены в искусственные сантиметры: один текущий размер обуви не показывает скорость роста стопы. Исследования показывают, что именно последовательность увеличения размера обуви может быть ранним индикатором скачка, но для этого нужна динамика, а не одно значение. Наибольший резерв точности для индивидуального прогноза дают точные серийные измерения роста и, когда это показано врачу, оценка костного возраста и реальной стадии пубертата. Khamis–Roche первоначально разработан на здоровых белых американских детях, поэтому для других популяций результат следует считать ориентиром, а не гарантией.`;
+
+  setTimeout(()=>animateHeightCounter(d.estimate,d),90);
+  setTimeout(()=>animateHeightTier(d),420);
+}
+
+$('again').onclick=()=>{ $('result').classList.remove('show'); $('formView').style.display='block'; $('bar').style.width='0'; window.scrollTo({top:0,behavior:'smooth'}); };
+</script>
+<div class="ov" id="gate" style="display:flex"><div class="ovBox"><h2>Ростометр</h2><p>Войдите через Google, чтобы получить прогноз. Первый расчёт бесплатный.</p><button class="gBtn" id="gbtn"><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><span>Продолжить с Google</span></button><div class="gErr" id="gerr"></div></div></div>
+<div class="ov" id="pay"><div class="ovBox"><h2>Бесплатный расчёт использован</h2><p>5 прогнозов роста — 50 ₽ (по 10 ₽ за расчёт).</p><button class="ovBtn" id="buy">Купить 5 прогнозов — 50 ₽</button><button class="ovGhost" id="payClose">Закрыть</button></div></div>
+<div id="ubar"><span>Прогнозов: <b id="ucount">0</b></span><button id="logout">Выйти</button></div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+const GID='ВСТАВЬТЕ_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+let me=null;const g=id=>document.getElementById(id);
+async function api(p,b){const r=await fetch('/api/'+p,{method:b?'POST':'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});return{s:r.status,j:await r.json().catch(()=>({}))}}
+function render(){g('gate').style.display=me?'none':'flex';g('ubar').style.display=me?'flex':'none';if(me)g('ucount').textContent=me.free+me.paid}
+window.addEventListener('load',async()=>{
+  g('gbtn').onclick=()=>{
+    if(!window.google||GID.startsWith('ВСТАВЬТЕ')){g('gerr').textContent='Вход через Google ещё не подключён: владельцу приложения нужно указать OAuth Client ID в index.html и открыть приложение со своего сайта.';return}
+    g('gerr').textContent='';
+    google.accounts.oauth2.initTokenClient({client_id:GID,scope:'openid email profile',prompt:'select_account',callback:async x=>{if(!x.access_token)return;const r=await api('auth',{access_token:x.access_token});if(r.s==200){me=r.j;render()}else g('gerr').textContent='Не удалось войти'}}).requestAccessToken();
+  };
+  const r=await api('me');me=r.s==200?r.j:null;render();history.replaceState(null,'','/');
+});
+window.__spend=async()=>{const r=await api('consume',{});if(r.s==200){me=r.j;render();return true}if(r.s==402)g('pay').style.display='flex';else if(r.s==401){me=null;render()}return false};
+g('buy').onclick=async()=>{const r=await api('checkout',{});if(r.j.url)location.href=r.j.url;else alert(r.s==503?'Оплата скоро будет подключена':'Не удалось создать платёж')};
+g('payClose').onclick=()=>g('pay').style.display='none';
+g('logout').onclick=async()=>{await api('logout',{});me=null;render()};
+</script>
+</body>
+</html>
