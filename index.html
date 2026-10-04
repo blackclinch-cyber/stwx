@@ -1690,7 +1690,7 @@ $('again').onclick=()=>{ $('result').classList.remove('show'); $('formView').sty
 <div id="ubar"><span>Прогнозов: <b id="ucount">0</b></span><button id="logout">Выйти</button></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-const GID='ВСТАВЬТЕ_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const GID='197757881919-r5g99a4809skndnuqdsddttfhkjvltmn.apps.googleusercontent.com';
 let me=null;const g=id=>document.getElementById(id);
 async function api(p,b){const r=await fetch('/api/'+p,{method:b?'POST':'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});return{s:r.status,j:await r.json().catch(()=>({}))}}
 function render(){g('gate').style.display=me?'none':'flex';g('ubar').style.display=me?'flex':'none';if(me)g('ucount').textContent=me.free+me.paid}
